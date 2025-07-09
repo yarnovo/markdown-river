@@ -86,7 +86,7 @@ class DemoApp {
     this.startTime = 0;
     this.totalChars = 0;
     this.errorCount = 0;
-    
+
     this.initElements();
     this.bindEvents();
     this.loadSample();
@@ -100,22 +100,22 @@ class DemoApp {
     this.sampleBtn = document.getElementById('sampleBtn');
     this.resetBtn = document.getElementById('resetBtn');
     this.clearLogsBtn = document.getElementById('clearLogsBtn');
-    
+
     // 输入输出
     this.input = document.getElementById('input');
     this.output = document.getElementById('output');
-    
+
     // 控制器
     this.speedInput = document.getElementById('speed');
     this.speedValue = document.getElementById('speedValue');
-    
+
     // 状态显示
     this.statusIndicator = document.getElementById('statusIndicator');
     this.statusText = document.getElementById('statusText');
     this.charCount = document.getElementById('charCount');
     this.renderTime = document.getElementById('renderTime');
     this.errorCountEl = document.getElementById('errorCount');
-    
+
     // 日志
     this.logs = document.getElementById('logs');
   }
@@ -126,18 +126,18 @@ class DemoApp {
     this.sampleBtn.addEventListener('click', () => this.loadSample());
     this.resetBtn.addEventListener('click', () => this.resetRenderer());
     this.clearLogsBtn.addEventListener('click', () => this.clearLogs());
-    
+
     this.speedInput.addEventListener('input', () => this.updateSpeed());
-    
+
     // 实时预览（非流式）
     let typingTimeout = null;
     this.input.addEventListener('input', () => {
       if (this.streamingInterval) return; // 流式输入时不响应
-      
+
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
-      
+
       typingTimeout = setTimeout(() => {
         this.renderPreview();
       }, 300);
@@ -152,37 +152,37 @@ class DemoApp {
       this.renderer = new StreamingMarkdownRenderer({
         container: this.output,
         enableMetrics: true,
-        debug: true
+        debug: true,
       });
       this.log('渲染器初始化完成', 'success');
     }
 
     // 监听渲染器事件
-    this.renderer.on('render:start', (data) => {
+    this.renderer.on('render:start', data => {
       this.updateStatus('rendering', '渲染中');
       this.startTime = data.startTime;
       this.log('开始渲染', 'info');
     });
 
-    this.renderer.on('render:progress', (data) => {
+    this.renderer.on('render:progress', data => {
       this.totalChars = data.processedChars;
       this.updateCharCount();
     });
 
-    this.renderer.on('render:end', (data) => {
+    this.renderer.on('render:end', data => {
       this.updateStatus('ended', '已完成');
       this.updateRenderTime(data.duration);
       this.log('渲染完成，耗时: ' + data.duration + 'ms，字符数: ' + data.totalChars, 'success');
     });
 
-    this.renderer.on('render:error', (data) => {
+    this.renderer.on('render:error', data => {
       this.updateStatus('error', '错误');
       this.errorCount++;
       this.updateErrorCount();
       this.log('渲染错误: ' + data.error.message, 'error');
     });
 
-    this.renderer.on('render:state:changed', (data) => {
+    this.renderer.on('render:state:changed', data => {
       this.log('状态变更: ' + data.previousState + ' → ' + data.newState, 'info');
     });
   }
@@ -204,17 +204,17 @@ class DemoApp {
 
     this.log('开始流式输入，内容长度: ' + text.length + ' 字符', 'info');
     this.initRenderer();
-    
+
     let index = 0;
     const speed = parseInt(this.speedInput.value);
-    
+
     this.streamBtn.textContent = '停止输入';
     this.streamBtn.classList.remove('primary');
     this.streamBtn.classList.add('danger');
-    
+
     this.totalChars = 0;
     this.updateCharCount();
-    
+
     this.streamingInterval = setInterval(() => {
       if (index >= text.length) {
         this.stopStreaming();
@@ -224,10 +224,10 @@ class DemoApp {
       // 模拟真实的流式输入模式
       const chunkSize = this.getRandomChunkSize();
       const chunk = text.slice(index, index + chunkSize);
-      
+
       this.renderer.write(chunk);
       this.log('写入数据: "' + chunk.replace(/\n/g, '\\n') + '" (位置: ' + index + ')', 'info');
-      
+
       index += chunkSize;
     }, speed);
   }
@@ -252,8 +252,8 @@ class DemoApp {
   getRandomChunkSize() {
     // 模拟真实的流式输入：大部分时候是单字符，偶尔是多字符
     const rand = Math.random();
-    if (rand < 0.7) return 1;           // 70% 概率单字符
-    if (rand < 0.9) return 2;           // 20% 概率两字符
+    if (rand < 0.7) return 1; // 70% 概率单字符
+    if (rand < 0.9) return 2; // 20% 概率两字符
     return Math.floor(Math.random() * 3) + 3; // 10% 概率 3-5 字符
   }
 
@@ -266,7 +266,7 @@ class DemoApp {
 
     this.log('开始实时预览渲染', 'info');
     this.initRenderer();
-    
+
     // 一次性渲染
     this.renderer.write(text);
     this.renderer.end();
@@ -276,18 +276,18 @@ class DemoApp {
     this.stopStreaming();
     this.input.value = '';
     this.output.innerHTML = '';
-    
+
     if (this.renderer) {
       this.renderer.reset();
     }
-    
+
     this.totalChars = 0;
     this.errorCount = 0;
     this.updateCharCount();
     this.updateErrorCount();
     this.updateRenderTime(0);
     this.updateStatus('idle', '空闲');
-    
+
     this.log('内容已清空', 'info');
   }
 
@@ -295,19 +295,19 @@ class DemoApp {
     this.clearContent();
     this.input.value = sampleMarkdown;
     this.log('示例内容已加载', 'success');
-    
+
     // 自动开始预览
     setTimeout(() => this.renderPreview(), 100);
   }
 
   resetRenderer() {
     this.stopStreaming();
-    
+
     if (this.renderer) {
       this.renderer.reset();
       this.log('渲染器已重置', 'info');
     }
-    
+
     this.output.innerHTML = '';
     this.totalChars = 0;
     this.errorCount = 0;
@@ -320,7 +320,7 @@ class DemoApp {
   updateSpeed() {
     const speed = this.speedInput.value;
     this.speedValue.textContent = speed + 'ms';
-    
+
     if (this.streamingInterval) {
       this.log('输入速度已更改为: ' + speed + 'ms', 'info');
       // 重新开始流式输入以应用新速度
@@ -351,10 +351,10 @@ class DemoApp {
     const logEntry = document.createElement('div');
     logEntry.className = 'log-entry ' + type;
     logEntry.innerHTML = '<span class="log-timestamp">[' + timestamp + ']</span>' + message;
-    
+
     this.logs.appendChild(logEntry);
     this.logs.scrollTop = this.logs.scrollHeight;
-    
+
     // 限制日志数量
     if (this.logs.children.length > 100) {
       this.logs.removeChild(this.logs.firstChild);
