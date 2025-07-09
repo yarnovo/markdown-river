@@ -15,15 +15,13 @@ import { EventBus } from '../infrastructure/event-bus.js';
  */
 export type ParserState =
   | 'NORMAL' // 普通文本
-  | 'POTENTIAL_EMPHASIS' // 可能的强调（*或_）
+  | 'EXPECT_BOLD_SECOND' // 期待第二个*来确认加粗
   | 'IN_BOLD' // 在加粗中
   | 'IN_ITALIC' // 在斜体中
   | 'ENDING_BOLD' // 即将结束加粗
   | 'ENDING_ITALIC' // 即将结束斜体
-  | 'POTENTIAL_CODE' // 可能的代码
   | 'IN_CODE' // 在代码中
   | 'IN_CODE_BLOCK' // 在代码块中
-  | 'POTENTIAL_LINK' // 可能的链接
   | 'IN_LINK_TEXT' // 在链接文本中
   | 'IN_LINK_URL'; // 在链接URL中
 
@@ -101,8 +99,8 @@ export class OptimisticParser {
         this.handleNormalState(char);
         break;
 
-      case 'POTENTIAL_EMPHASIS':
-        this.handlePotentialEmphasisState(char);
+      case 'EXPECT_BOLD_SECOND':
+        this.handleExpectBoldSecondState(char);
         break;
 
       case 'IN_BOLD':
@@ -119,10 +117,6 @@ export class OptimisticParser {
 
       case 'ENDING_ITALIC':
         this.handleEndingItalicState(char);
-        break;
-
-      case 'POTENTIAL_CODE':
-        this.handlePotentialCodeState(char);
         break;
 
       case 'IN_CODE':
@@ -145,17 +139,32 @@ export class OptimisticParser {
    * 处理普通状态
    */
   private handleNormalState(char: string): void {
-    if (char === '*' || char === '_') {
-      this.state = 'POTENTIAL_EMPHASIS';
+    if (char === '*') {
+      // 乐观预测：这可能是强调的开始
       this.pendingMarkers = char;
       this.potentialStartPosition = this.position;
-      // 不立即输出，等待确认
+      this.state = 'EXPECT_BOLD_SECOND';
+      // 暂不输出，等待下一个字符
+    } else if (char === '_') {
+      // 直接进入斜体状态
+      this.state = 'IN_ITALIC';
+      this.contextStack.push({
+        type: 'ITALIC',
+        startPosition: this.position,
+        markerCount: 1,
+      });
+      this.emitToken({ type: 'ITALIC_START' });
     } else if (char === '`') {
-      this.state = 'POTENTIAL_CODE';
-      this.pendingMarkers = char;
-      this.potentialStartPosition = this.position;
+      // 直接进入代码状态
+      this.state = 'IN_CODE';
+      this.contextStack.push({
+        type: 'CODE',
+        startPosition: this.position,
+      });
+      this.emitToken({ type: 'CODE_START' });
     } else if (char === '[') {
-      this.state = 'POTENTIAL_LINK';
+      // 直接进入链接状态
+      this.state = 'IN_LINK_TEXT';
       this.emitToken({ type: 'LINK_TEXT_START' });
     } else if (char === '\n') {
       this.handleLineBreak();
@@ -165,55 +174,36 @@ export class OptimisticParser {
   }
 
   /**
-   * 处理可能的强调状态
+   * 处理期待第二个*的状态
    */
-  private handlePotentialEmphasisState(char: string): void {
-    const marker = this.pendingMarkers[0];
-
-    if (char === marker) {
-      // 连续两个相同符号，很可能是加粗
-      this.pendingMarkers += char;
-
-      if (this.pendingMarkers.length === 2) {
-        // 确认是加粗，开始乐观渲染
-        this.state = 'IN_BOLD';
-        this.contextStack.push({
-          type: 'BOLD',
-          startPosition: this.potentialStartPosition,
-          markerCount: 2,
-        });
-        this.emitToken({ type: 'BOLD_START' });
-        this.pendingMarkers = '';
-      }
-    } else if (/[a-zA-Z0-9\u4e00-\u9fa5]/.test(char)) {
-      // 后面跟着字母/数字/中文，可能是斜体
-      if (this.pendingMarkers.length === 1) {
-        this.state = 'IN_ITALIC';
-        this.contextStack.push({
-          type: 'ITALIC',
-          startPosition: this.potentialStartPosition,
-          markerCount: 1,
-        });
-        this.emitToken({ type: 'ITALIC_START' });
-        this.emitToken({ type: 'TEXT', content: char });
-        this.pendingMarkers = '';
-      }
-    } else if (char === ' ' || char === '\n') {
-      // 后面是空格或换行，不是格式标记
-      this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
+  private handleExpectBoldSecondState(char: string): void {
+    if (char === '*') {
+      // 确认是加粗！
+      this.state = 'IN_BOLD';
+      this.contextStack.push({
+        type: 'BOLD',
+        startPosition: this.potentialStartPosition,
+        markerCount: 2,
+      });
+      this.emitToken({ type: 'BOLD_START' });
+      this.pendingMarkers = '';
+    } else if (char === ' ' || char === '\n' || char === '\t') {
+      // 预期违背：*后面跟空白，不可能是格式
+      this.emitToken({ type: 'TEXT', content: '*' });
       this.pendingMarkers = '';
       this.state = 'NORMAL';
       this.processChar(char); // 重新处理当前字符
     } else {
-      // 其他情况，继续观察
-      this.pendingMarkers += char;
-
-      // 如果积累太多字符，放弃预测
-      if (this.pendingMarkers.length > 3) {
-        this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
-        this.pendingMarkers = '';
-        this.state = 'NORMAL';
-      }
+      // 单个*后跟其他字符，进入斜体状态
+      this.state = 'IN_ITALIC';
+      this.contextStack.push({
+        type: 'ITALIC',
+        startPosition: this.potentialStartPosition,
+        markerCount: 1,
+      });
+      this.emitToken({ type: 'ITALIC_START' });
+      this.emitToken({ type: 'TEXT', content: char });
+      this.pendingMarkers = '';
     }
   }
 
@@ -221,17 +211,19 @@ export class OptimisticParser {
    * 处理加粗状态
    */
   private handleInBoldState(char: string): void {
-    if (char === '*' || char === '_') {
-      const context = this.contextStack[this.contextStack.length - 1];
-      if (context && context.type === 'BOLD' && char === this.getMarkerForContext(context)) {
-        this.state = 'ENDING_BOLD';
-        this.pendingMarkers = char;
-      } else {
-        // 不同的标记，可能是嵌套的斜体
-        this.state = 'POTENTIAL_EMPHASIS';
-        this.pendingMarkers = char;
-        this.potentialStartPosition = this.position;
-      }
+    if (char === '*') {
+      // 可能是结束标记
+      this.state = 'ENDING_BOLD';
+      this.pendingMarkers = char;
+    } else if (char === '_') {
+      // 嵌套的斜体 - 直接进入斜体状态
+      this.state = 'IN_ITALIC';
+      this.contextStack.push({
+        type: 'ITALIC',
+        startPosition: this.position,
+        markerCount: 1,
+      });
+      this.emitToken({ type: 'ITALIC_START' });
     } else {
       this.emitToken({ type: 'TEXT', content: char });
     }
@@ -241,18 +233,23 @@ export class OptimisticParser {
    * 处理斜体状态
    */
   private handleInItalicState(char: string): void {
-    if (char === '*' || char === '_') {
+    if (char === '*' && this.contextStack.length > 0) {
       const context = this.contextStack[this.contextStack.length - 1];
-      if (context && context.type === 'ITALIC' && char === this.getMarkerForContext(context)) {
+      if (context && context.type === 'ITALIC' && context.markerCount === 1) {
+        // 可能是结束斜体的 *
+        this.state = 'ENDING_ITALIC';
+        this.pendingMarkers = char;
+      } else {
+        // 在斜体中遇到 *，可能是嵌套的加粗
+        this.emitToken({ type: 'TEXT', content: char });
+      }
+    } else if (char === '_' && this.contextStack.length > 0) {
+      const context = this.contextStack[this.contextStack.length - 1];
+      if (context && context.type === 'ITALIC') {
         // 结束斜体
         this.contextStack.pop();
         this.emitToken({ type: 'ITALIC_END' });
         this.state = this.contextStack.length > 0 ? this.getStateForContext() : 'NORMAL';
-      } else {
-        // 可能是嵌套的加粗
-        this.state = 'POTENTIAL_EMPHASIS';
-        this.pendingMarkers = char;
-        this.potentialStartPosition = this.position;
       }
     } else {
       this.emitToken({ type: 'TEXT', content: char });
@@ -286,39 +283,21 @@ export class OptimisticParser {
   /**
    * 处理即将结束斜体状态
    */
-  private handleEndingItalicState(_char: string): void {
-    // 斜体只需要一个符号，所以直接在 handleInItalicState 中处理了
-  }
-
-  /**
-   * 处理可能的代码状态
-   */
-  private handlePotentialCodeState(char: string): void {
-    if (char === '`') {
-      this.pendingMarkers += char;
-
-      if (this.pendingMarkers.length === 3) {
-        // 三个反引号，代码块
-        this.state = 'IN_CODE_BLOCK';
-        this.contextStack.push({
-          type: 'CODE_BLOCK',
-          startPosition: this.potentialStartPosition,
-        });
-        this.emitToken({ type: 'CODE_BLOCK_START' });
-        this.pendingMarkers = '';
-      }
+  private handleEndingItalicState(char: string): void {
+    if (char === ' ' || char === '\n' || char === '\t') {
+      // 预期违背：*后面跟空白，不是斜体结束
+      this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
+      this.pendingMarkers = '';
+      this.state = 'IN_ITALIC';
+      this.processChar(char);
     } else {
-      // 单个反引号，行内代码
-      if (this.pendingMarkers.length === 1) {
-        this.state = 'IN_CODE';
-        this.contextStack.push({
-          type: 'CODE',
-          startPosition: this.potentialStartPosition,
-        });
-        this.emitToken({ type: 'CODE_START' });
-        this.emitToken({ type: 'TEXT', content: char });
-        this.pendingMarkers = '';
-      }
+      // 确认结束斜体
+      this.contextStack.pop();
+      this.emitToken({ type: 'ITALIC_END' });
+      this.pendingMarkers = '';
+      this.state = this.contextStack.length > 0 ? this.getStateForContext() : 'NORMAL';
+      // 处理当前字符
+      this.processChar(char);
     }
   }
 
@@ -363,14 +342,6 @@ export class OptimisticParser {
   private handleLineBreak(): void {
     // 简单处理，后续可以增强
     this.emitToken({ type: 'LINE_BREAK' });
-  }
-
-  /**
-   * 获取上下文对应的标记符
-   */
-  private getMarkerForContext(_context: ContextItem): string {
-    // 这里简化处理，实际应该记录使用的是 * 还是 _
-    return '*';
   }
 
   /**

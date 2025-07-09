@@ -112,6 +112,37 @@ export class DOMDiff {
   constructor(options: DOMDiffOptions = {}) {
     this.eventBus = options.eventBus || new EventBus();
     this.debug = options.debug || false;
+    this.setupEventListeners();
+  }
+
+  /**
+   * 设置事件监听器
+   */
+  private setupEventListeners(): void {
+    this.eventBus.on('snapshot:updated', (event: any) => {
+      const { snapshot, version } = event as {
+        snapshot: DOMSnapshot;
+        version: number;
+        timestamp: number;
+      };
+      this.handleSnapshot(snapshot, version);
+    });
+  }
+
+  /**
+   * 处理快照事件
+   */
+  private handleSnapshot(snapshot: DOMSnapshot, version: number): void {
+    const operations = this.applySnapshot(snapshot);
+
+    // 发出操作事件
+    if (operations.length > 0) {
+      this.eventBus.emit('dom:operations', {
+        operations,
+        version,
+        timestamp: Date.now(),
+      });
+    }
   }
 
   /**
