@@ -16,7 +16,7 @@
     "copy-dist": "node scripts/copy-dist-to-demo.js",
     "demo": "npm run build && npm run copy-dist && serve demo -p 3000",
     "demo:watch": "npm run build && npm run copy-dist && concurrently \"npm run build -- --watch\" \"chokidar 'dist/**/*' -c 'npm run copy-dist' --debounce 1000\" \"serve demo -p 3000\"",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
     "prebuild": "rimraf dist",
