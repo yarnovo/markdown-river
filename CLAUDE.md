@@ -165,6 +165,7 @@ npm run check      # 完整检查（lint + typecheck + test）
 - ✅ DOM 管理器模块（dom-manager + 测试）
 - ✅ 样式处理器模块（style-processor + 测试）
 - ✅ 问答文档（qa/what-is-ring-buffer.md）
+- ✅ 问答文档（qa/what-is-commonmark.md）
 
 ### 核心洞察
 
