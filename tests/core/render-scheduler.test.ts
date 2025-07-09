@@ -455,10 +455,18 @@ describe('RenderScheduler', () => {
       scheduler.addTokens(tokens);
       vi.runOnlyPendingTimers();
 
+      // 检查是否创建了 em 元素
       expect(spy).toHaveBeenCalledWith(
         expect.objectContaining({
           tag: 'em',
-          attributes: expect.objectContaining({ id: 'current-emphasis' }),
+        })
+      );
+
+      // 检查是否创建了包含 'italic' 文本的 span 元素
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tag: 'span',
+          text: 'italic',
         })
       );
     });

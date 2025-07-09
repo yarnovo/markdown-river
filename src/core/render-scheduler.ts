@@ -67,6 +67,9 @@ export class RenderScheduler {
   // 内容根节点ID
   private contentRootId: string = 'content';
 
+  // 上下文栈，用于追踪当前活动的元素
+  private contextStack: string[] = [];
+
   constructor(
     options: SchedulerOptions & {
       eventBus?: EventBus;
@@ -204,6 +207,7 @@ export class RenderScheduler {
     this.renderCount = 0;
     this.lastRenderTime = 0;
     this.currentInterval = this.options.minInterval;
+    this.contextStack = [];
   }
 
   /**
@@ -350,72 +354,108 @@ export class RenderScheduler {
           tag: 'span',
           text: token.content,
         });
-        this.domManager.appendChild(this.contentRootId, textNodeId);
+        // 添加到当前活动的上下文（最上层的元素）
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, textNodeId);
         break;
       }
 
       case TokenType.NEWLINE: {
         const brNodeId = this.domManager.createElement({ tag: 'br' });
-        this.domManager.appendChild(this.contentRootId, brNodeId);
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, brNodeId);
         break;
       }
 
-      case TokenType.PARAGRAPH_START:
-        this.domManager.createElement({
+      case TokenType.PARAGRAPH_START: {
+        const paragraphId = this.domManager.createElement({
           tag: 'p',
-          attributes: { id: 'current-paragraph' },
+          attributes: { id: 'current-paragraph', class: 'mb-4' },
         });
+        this.domManager.appendChild(this.contentRootId, paragraphId);
+        this.contextStack.push(paragraphId);
         break;
+      }
 
-      case TokenType.PARAGRAPH_END:
-        // 段落结束，不需要特殊处理
+      case TokenType.PARAGRAPH_END: {
+        // 段落结束，弹出上下文栈
+        if (this.contextStack.length > 0) {
+          this.contextStack.pop();
+        }
         break;
+      }
 
-      case TokenType.EMPHASIS_START:
-        this.domManager.createElement({
+      case TokenType.EMPHASIS_START: {
+        const emphasisId = this.domManager.createElement({
           tag: 'em',
-          attributes: { id: 'current-emphasis' },
         });
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, emphasisId);
+        this.contextStack.push(emphasisId);
         break;
+      }
 
-      case TokenType.EMPHASIS_END:
-        // 强调结束，不需要特殊处理
+      case TokenType.EMPHASIS_END: {
+        // 强调结束，弹出上下文栈
+        if (this.contextStack.length > 0) {
+          this.contextStack.pop();
+        }
         break;
+      }
 
-      case TokenType.STRONG_START:
-        this.domManager.createElement({
+      case TokenType.STRONG_START: {
+        const strongId = this.domManager.createElement({
           tag: 'strong',
-          attributes: { id: 'current-strong' },
         });
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, strongId);
+        this.contextStack.push(strongId);
         break;
+      }
 
-      case TokenType.STRONG_END:
-        // 加粗结束，不需要特殊处理
+      case TokenType.STRONG_END: {
+        // 加粗结束，弹出上下文栈
+        if (this.contextStack.length > 0) {
+          this.contextStack.pop();
+        }
         break;
+      }
 
-      case TokenType.CODE_START:
-        this.domManager.createElement({
+      case TokenType.CODE_START: {
+        const codeId = this.domManager.createElement({
           tag: 'code',
-          attributes: { id: 'current-code' },
         });
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, codeId);
+        this.contextStack.push(codeId);
         break;
+      }
 
-      case TokenType.CODE_END:
-        // 代码结束，不需要特殊处理
+      case TokenType.CODE_END: {
+        // 代码结束，弹出上下文栈
+        if (this.contextStack.length > 0) {
+          this.contextStack.pop();
+        }
         break;
+      }
 
       case TokenType.HEADING_START: {
         const level = token.metadata?.level || 1;
-        this.domManager.createElement({
+        const headingId = this.domManager.createElement({
           tag: `h${level}`,
-          attributes: { id: 'current-heading' },
         });
+        this.domManager.appendChild(this.contentRootId, headingId);
+        this.contextStack.push(headingId);
         break;
       }
 
-      case TokenType.HEADING_END:
-        // 标题结束，不需要特殊处理
+      case TokenType.HEADING_END: {
+        // 标题结束，弹出上下文栈
+        if (this.contextStack.length > 0) {
+          this.contextStack.pop();
+        }
         break;
+      }
 
       // 可能性令牌暂时作为文本处理
       case TokenType.POTENTIAL_EMPHASIS:
@@ -426,7 +466,8 @@ export class RenderScheduler {
           tag: 'span',
           text: token.content,
         });
-        this.domManager.appendChild(this.contentRootId, potentialNodeId);
+        const parentId = this.getCurrentParent();
+        this.domManager.appendChild(parentId, potentialNodeId);
         break;
       }
 
@@ -437,12 +478,25 @@ export class RenderScheduler {
             tag: 'span',
             text: token.content,
           });
-          this.domManager.appendChild(this.contentRootId, defaultNodeId);
+          const parentId = this.getCurrentParent();
+          this.domManager.appendChild(parentId, defaultNodeId);
         }
       }
     }
 
     this.stats.renderedTokens++;
+  }
+
+  /**
+   * 获取当前的父级元素ID
+   */
+  private getCurrentParent(): string {
+    // 如果上下文栈不为空，返回栈顶元素
+    if (this.contextStack.length > 0) {
+      return this.contextStack[this.contextStack.length - 1];
+    }
+    // 否则返回内容根节点
+    return this.contentRootId;
   }
 
   /**

@@ -100,6 +100,10 @@ export class IncrementalParser {
 
     const tokens: Token[] = [];
 
+    // 先尝试延迟确认之前的潜在令牌
+    const delayedTokens = this.tryDelayedConfirmation();
+    tokens.push(...delayedTokens);
+
     // 逐字符处理
     while (this.bufferManager.available() > 0) {
       const char = this.bufferManager.read(1);
@@ -173,9 +177,11 @@ export class IncrementalParser {
             this.updatePosition(nextChar);
           }
         }
-        tokens.push(
-          this.createPotentialToken(TokenType.POTENTIAL_HEADING, headingPrefix, { level })
-        );
+        // 立即确认标题
+        tokens.push(this.createConfirmedToken(TokenType.HEADING_START, headingPrefix));
+        const headingToken = tokens[tokens.length - 1];
+        headingToken.metadata = { level };
+        this.pushContext(ContextType.HEADING, headingPrefix);
       } else {
         tokens.push(this.createTextToken(char));
       }
@@ -186,15 +192,24 @@ export class IncrementalParser {
           this.createPotentialToken(TokenType.POTENTIAL_LIST_ITEM, char, { listType: 'unordered' })
         );
       } else {
-        // 可能是强调或分隔线
+        // 可能是强调或分隔线，需要检查完整模式
         tokens.push(...this.processEmphasisOrHR(char));
       }
     } else if (char === '-' || char === '+') {
       // 可能是列表或分隔线
       tokens.push(...this.processListOrHR(char));
     } else if (char === '`') {
-      // 可能是代码
-      tokens.push(...this.processCodeMarker(char));
+      // 在根上下文中，代码标记也总是创建潜在令牌
+      const ahead = this.bufferManager.peek(0, 2);
+      if (ahead === '``') {
+        // 三个反引号，代码块 - 这个可以立即确认
+        tokens.push(this.createConfirmedToken(TokenType.CODE_BLOCK_START, '```'));
+        this.bufferManager.read(2); // 消费两个字符
+        this.pushContext(ContextType.CODE_BLOCK, '```');
+      } else {
+        // 单个反引号，可能是行内代码 - 创建潜在令牌
+        tokens.push(this.createPotentialToken(TokenType.POTENTIAL_CODE, char));
+      }
     } else if (char === '[') {
       // 可能是链接
       tokens.push(this.createPotentialToken(TokenType.POTENTIAL_LINK_START, char));
@@ -280,14 +295,27 @@ export class IncrementalParser {
 
     if (next === char) {
       // 双字符，可能是加粗
-      tokens.push(this.createPotentialToken(TokenType.POTENTIAL_STRONG, char + char));
+      const marker = char + char;
       this.bufferManager.read(1); // 消费下一个字符
+
+      // 先尝试立即确认
+      if (this.canConfirmStrong(marker)) {
+        tokens.push(this.createConfirmedToken(TokenType.STRONG_START, marker));
+        this.pushContext(ContextType.STRONG, marker);
+      } else {
+        // 无法立即确认，创建潜在令牌
+        tokens.push(this.createPotentialToken(TokenType.POTENTIAL_STRONG, marker));
+      }
     } else {
       // 单字符，可能是斜体
-      tokens.push(this.createPotentialToken(TokenType.POTENTIAL_EMPHASIS, char));
+      if (this.canConfirmEmphasis(char)) {
+        tokens.push(this.createConfirmedToken(TokenType.EMPHASIS_START, char));
+        this.pushContext(ContextType.EMPHASIS, char);
+      } else {
+        // 无法立即确认，创建潜在令牌
+        tokens.push(this.createPotentialToken(TokenType.POTENTIAL_EMPHASIS, char));
+      }
     }
-
-    // 暂时不自动确认令牌，保持为可能性令牌
 
     return tokens;
   }
@@ -301,11 +329,18 @@ export class IncrementalParser {
 
     if (ahead === '``') {
       // 三个反引号，代码块
-      tokens.push(this.createPotentialToken(TokenType.POTENTIAL_CODE_BLOCK, '```'));
+      tokens.push(this.createConfirmedToken(TokenType.CODE_BLOCK_START, '```'));
       this.bufferManager.read(2); // 消费两个字符
+      this.pushContext(ContextType.CODE_BLOCK, '```');
     } else {
       // 单个反引号，行内代码
-      tokens.push(this.createPotentialToken(TokenType.POTENTIAL_CODE, char));
+      if (this.canConfirmCode(char)) {
+        tokens.push(this.createConfirmedToken(TokenType.CODE_START, char));
+        this.pushContext(ContextType.CODE, char);
+      } else {
+        // 无法立即确认，创建潜在令牌
+        tokens.push(this.createPotentialToken(TokenType.POTENTIAL_CODE, char));
+      }
     }
 
     return tokens;
@@ -425,6 +460,9 @@ export class IncrementalParser {
         // 斜体结束
         tokens.push(this.createToken(TokenType.EMPHASIS_END, char));
         this.popContext();
+      } else if (context.type === ContextType.STRONG && marker === '**') {
+        // 在双星号强调上下文中遇到单个星号，处理为嵌套斜体
+        tokens.push(...this.processEmphasisMarker(char));
       } else {
         tokens.push(this.createTextToken(char));
       }
@@ -460,51 +498,153 @@ export class IncrementalParser {
   }
 
   /**
-   * 检查强调确认
+   * 检查是否可以确认强调为加粗格式
    */
-  private checkEmphasisConfirmation(tokens: Token[]): void {
-    // 简化实现：检查待确认令牌
-    const pending = this.state.pendingTokens;
-    for (let i = 0; i < pending.length; i++) {
-      const token = pending[i];
-      if (
-        token.type === TokenType.POTENTIAL_EMPHASIS ||
-        token.type === TokenType.POTENTIAL_STRONG
-      ) {
-        // 简单的确认逻辑：如果找到配对的标记，确认令牌
-        const confirmed = this.confirmEmphasisToken(token);
-        if (confirmed) {
-          tokens.push(confirmed);
-          pending.splice(i, 1);
-          i--;
-        }
-      }
+  private canConfirmStrong(marker: string): boolean {
+    const ahead = this.bufferManager.peek(0, 50);
+    if (ahead.length === 0) {
+      // 缓冲区为空，可能是流式输入，延迟确认
+      return false;
     }
+
+    // 如果缓冲区内容少于最小合理长度，可能需要等待更多输入
+    if (ahead.length < 3) {
+      return false;
+    }
+
+    // 检查是否以非空格字符开始
+    if (ahead.startsWith(' ')) return false;
+
+    // 查找结束标记
+    const endIndex = ahead.indexOf(marker);
+    if (endIndex === -1) {
+      // 没有找到结束标记，但如果缓冲区已经很长，可能不会有结束标记
+      if (ahead.length >= 30) {
+        return false; // 确定没有结束标记，不是格式
+      }
+      return false; // 等待更多输入
+    }
+
+    // 确保结束标记前有内容
+    if (endIndex === 0) return false;
+
+    // 确保结束标记前不是空格
+    if (ahead[endIndex - 1] === ' ') return false;
+
+    return true;
   }
 
   /**
-   * 确认强调令牌
+   * 检查是否可以确认强调为斜体格式
    */
-  private confirmEmphasisToken(token: Token): Token | null {
-    // 简化实现
-    if (token.type === TokenType.POTENTIAL_EMPHASIS) {
-      const confirmed = {
-        ...token,
-        type: TokenType.EMPHASIS_START,
-        confidence: TokenConfidence.CONFIRMED,
-      };
-      this.pushContext(ContextType.EMPHASIS, token.content);
-      return confirmed;
-    } else if (token.type === TokenType.POTENTIAL_STRONG) {
-      const confirmed = {
-        ...token,
-        type: TokenType.STRONG_START,
-        confidence: TokenConfidence.CONFIRMED,
-      };
-      this.pushContext(ContextType.STRONG, token.content);
-      return confirmed;
+  private canConfirmEmphasis(marker: string): boolean {
+    const ahead = this.bufferManager.peek(0, 50);
+    if (ahead.length === 0) {
+      return false;
     }
-    return null;
+
+    if (ahead.length < 2) {
+      return false;
+    }
+
+    // 检查是否以非空格字符开始
+    if (ahead.startsWith(' ')) return false;
+
+    // 查找结束标记
+    const endIndex = ahead.indexOf(marker);
+    if (endIndex === -1) {
+      if (ahead.length >= 30) {
+        return false;
+      }
+      return false;
+    }
+
+    // 确保结束标记前有内容
+    if (endIndex === 0) return false;
+
+    // 确保结束标记前不是空格
+    if (ahead[endIndex - 1] === ' ') return false;
+
+    return true;
+  }
+
+  /**
+   * 检查是否可以确认代码格式
+   */
+  private canConfirmCode(marker: string): boolean {
+    const ahead = this.bufferManager.peek(0, 20);
+    if (ahead.length === 0) {
+      return false;
+    }
+
+    if (ahead.length < 2) {
+      return false;
+    }
+
+    // 检查是否以非空格字符开始
+    if (ahead.startsWith(' ')) return false;
+
+    // 查找结束标记
+    const endIndex = ahead.indexOf(marker);
+    if (endIndex === -1) {
+      if (ahead.length >= 15) {
+        return false;
+      }
+      return false;
+    }
+
+    // 确保结束标记前有内容
+    if (endIndex === 0) return false;
+
+    return true;
+  }
+
+  /**
+   * 尝试延迟确认待确认的令牌
+   */
+  private tryDelayedConfirmation(): Token[] {
+    const tokens: Token[] = [];
+    const confirmed: Token[] = [];
+    const remaining: Token[] = [];
+
+    for (const pending of this.state.pendingTokens) {
+      if (pending.type === TokenType.POTENTIAL_STRONG && pending.content === '**') {
+        if (this.canConfirmStrong('**')) {
+          confirmed.push(this.createConfirmedToken(TokenType.STRONG_START, '**'));
+          this.pushContext(ContextType.STRONG, '**');
+        } else {
+          remaining.push(pending);
+        }
+      } else if (pending.type === TokenType.POTENTIAL_EMPHASIS && pending.content.length === 1) {
+        if (this.canConfirmEmphasis(pending.content)) {
+          confirmed.push(this.createConfirmedToken(TokenType.EMPHASIS_START, pending.content));
+          this.pushContext(ContextType.EMPHASIS, pending.content);
+        } else {
+          remaining.push(pending);
+        }
+      } else if (pending.type === TokenType.POTENTIAL_CODE && pending.content === '`') {
+        if (this.canConfirmCode('`')) {
+          confirmed.push(this.createConfirmedToken(TokenType.CODE_START, '`'));
+          this.pushContext(ContextType.CODE, '`');
+        } else {
+          remaining.push(pending);
+        }
+      } else {
+        remaining.push(pending);
+      }
+    }
+
+    this.state.pendingTokens = remaining;
+    tokens.push(...confirmed);
+
+    return tokens;
+  }
+
+  /**
+   * 创建确认的令牌
+   */
+  private createConfirmedToken(type: TokenType, content: string): Token {
+    return this.createToken(type, content, TokenConfidence.CONFIRMED);
   }
 
   /**
@@ -559,10 +699,8 @@ export class IncrementalParser {
       token.metadata = metadata as Token['metadata'];
     }
 
-    // 添加到待确认列表（不要重复添加已确认的令牌）
-    if (token.confidence === TokenConfidence.POTENTIAL) {
-      this.state.pendingTokens.push(token);
-    }
+    // 添加到待确认列表
+    this.state.pendingTokens.push(token);
 
     return token;
   }
@@ -685,19 +823,47 @@ export class IncrementalParser {
   end(): Token[] {
     const tokens: Token[] = [];
 
-    // 处理所有待确认的令牌
+    // 最后一次尝试延迟确认
+    const finalDelayedTokens = this.tryDelayedConfirmation();
+    tokens.push(...finalDelayedTokens);
+
+    // 处理所有剩余的待确认令牌
     for (const pending of this.state.pendingTokens) {
-      // 无法确认的令牌根据其原始内容转为文本
-      if (
-        pending.type === TokenType.POTENTIAL_STRONG ||
-        pending.type === TokenType.POTENTIAL_EMPHASIS ||
-        pending.type === TokenType.POTENTIAL_CODE ||
-        pending.type === TokenType.POTENTIAL_CODE_BLOCK
-      ) {
-        // 这些特殊标记需要原样输出
-        tokens.push(this.createTextToken(pending.content));
+      // 在流结束时，尝试强制确认某些格式
+      if (pending.type === TokenType.POTENTIAL_STRONG && pending.content === '**') {
+        // 检查是否有匹配的结束标记
+        const remainingContent = this.bufferManager.peek(0, 100);
+        const endIndex = remainingContent.indexOf('**');
+        if (endIndex !== -1 && endIndex > 0) {
+          // 找到匹配的结束标记，确认为强调
+          tokens.push(this.createConfirmedToken(TokenType.STRONG_START, '**'));
+          this.pushContext(ContextType.STRONG, '**');
+        } else {
+          // 没有匹配的结束标记，输出为文本
+          tokens.push(this.createTextToken(pending.content));
+        }
+      } else if (pending.type === TokenType.POTENTIAL_EMPHASIS && pending.content.length === 1) {
+        // 检查是否有匹配的结束标记
+        const remainingContent = this.bufferManager.peek(0, 100);
+        const endIndex = remainingContent.indexOf(pending.content);
+        if (endIndex !== -1 && endIndex > 0) {
+          tokens.push(this.createConfirmedToken(TokenType.EMPHASIS_START, pending.content));
+          this.pushContext(ContextType.EMPHASIS, pending.content);
+        } else {
+          tokens.push(this.createTextToken(pending.content));
+        }
+      } else if (pending.type === TokenType.POTENTIAL_CODE && pending.content === '`') {
+        // 检查是否有匹配的结束标记
+        const remainingContent = this.bufferManager.peek(0, 100);
+        const endIndex = remainingContent.indexOf('`');
+        if (endIndex !== -1 && endIndex > 0) {
+          tokens.push(this.createConfirmedToken(TokenType.CODE_START, '`'));
+          this.pushContext(ContextType.CODE, '`');
+        } else {
+          tokens.push(this.createTextToken(pending.content));
+        }
       } else {
-        // 其他令牌也转为文本
+        // 其他令牌转为文本
         tokens.push(this.createTextToken(pending.content));
       }
     }
@@ -710,6 +876,12 @@ export class IncrementalParser {
       const context = this.getCurrentContext();
       if (context.type === ContextType.PARAGRAPH) {
         tokens.push(this.createToken(TokenType.PARAGRAPH_END, ''));
+      } else if (context.type === ContextType.STRONG) {
+        tokens.push(this.createToken(TokenType.STRONG_END, context.startMarker));
+      } else if (context.type === ContextType.EMPHASIS) {
+        tokens.push(this.createToken(TokenType.EMPHASIS_END, context.startMarker));
+      } else if (context.type === ContextType.CODE) {
+        tokens.push(this.createToken(TokenType.CODE_END, context.startMarker));
       }
       this.popContext();
     }
