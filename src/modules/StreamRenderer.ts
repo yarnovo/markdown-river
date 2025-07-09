@@ -50,6 +50,11 @@ export class StreamRenderer {
   render(events: ParseEvent[]): void {
     if (this.destroyed) return;
 
+    // 重置渲染状态，确保每次 render 都是独立的
+    this.elementStack = [];
+    this.currentParent = this.container;
+    this.pendingTextContent = '';
+
     const fragment = document.createDocumentFragment();
 
     for (const event of events) {
@@ -58,7 +63,8 @@ export class StreamRenderer {
 
     // 批量更新 DOM
     if (fragment.childNodes.length > 0) {
-      this.currentParent.appendChild(fragment);
+      // 总是添加到容器，而不是当前父元素
+      this.container.appendChild(fragment);
     }
 
     // 发送渲染完成事件
@@ -105,10 +111,12 @@ export class StreamRenderer {
       this.pendingTextContent = '';
     }
 
-    // 添加到当前父元素或fragment
+    // 添加元素到当前父元素
     if (this.currentParent === this.container) {
+      // 如果当前父元素是容器，添加到 fragment
       fragment.appendChild(element);
     } else {
+      // 否则添加到当前父元素
       this.currentParent.appendChild(element);
     }
 
@@ -131,6 +139,7 @@ export class StreamRenderer {
     // 如果有待处理的文本，先添加
     if (this.pendingTextContent) {
       const textNode = document.createTextNode(this.pendingTextContent);
+      // 文本总是添加到当前父元素
       this.currentParent.appendChild(textNode);
       this.pendingTextContent = '';
     }

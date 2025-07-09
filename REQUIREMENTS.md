@@ -50,6 +50,25 @@
 - 高效率：能够处理高频率的小块输入而不造成性能问题
 - 内存友好：合理的内存使用，避免因长文本造成内存泄漏
 
+### 5. 样式自定义
+
+- **标签样式映射**：支持传入 Map 结构，将 HTML 标签映射到自定义的 CSS 类名
+- **灵活的样式系统**：
+  - 支持自定义 CSS 类名
+  - 兼容 Tailwind CSS 等实用类框架
+  - 允许为每种 Markdown 元素指定样式
+- **示例配置**：
+  ```javascript
+  const styleMap = new Map([
+    ['h1', 'text-4xl font-bold mb-4'],
+    ['h2', 'text-3xl font-semibold mb-3'],
+    ['p', 'text-base leading-relaxed mb-2'],
+    ['strong', 'font-bold text-gray-900'],
+    ['code', 'bg-gray-100 px-1 py-0.5 rounded'],
+    ['blockquote', 'border-l-4 border-gray-300 pl-4 italic'],
+  ]);
+  ```
+
 ## 技术方案要求
 
 ### 1. 解析策略
@@ -69,6 +88,7 @@
 - 模块化设计，便于添加新的 Markdown 格式支持
 - 提供清晰的 API，便于集成到不同的前端框架
 - 支持自定义渲染规则
+- 样式系统可插拔，支持运行时动态修改样式映射
 
 ## 成功标准
 
