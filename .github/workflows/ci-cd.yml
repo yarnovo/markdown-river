@@ -1,0 +1,111 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci-cd:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          if [ ! -f "dist/bump-version.js" ]; then
+            echo "Build output not found!"
+            exit 1
+          fi
+          echo "Build successful, output verified."
+
+      - name: Test version validation command
+        run: |
+          echo "Testing version validation with valid versions..."
+          node dist/bump-version.js validate 1.0.0
+          node dist/bump-version.js validate 2.1.0-alpha.3
+          node dist/bump-version.js validate 1.0.0-rc.1
+          echo "✅ Version validation tests passed!"
+
+      - name: Validate package.json version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "Validating package.json version: $PACKAGE_VERSION"
+          node dist/bump-version.js validate "$PACKAGE_VERSION"
+          echo "✅ package.json version is valid!"
+
+      # 只在推送标签时验证版本一致性并发布
+      - name: Verify tag version matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          # 去掉 'v' 前缀
+          TAG_VERSION_NO_V="${TAG_VERSION#v}"
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+          echo "Tag version: $TAG_VERSION_NO_V"
+          echo "Package version: $PACKAGE_VERSION"
+
+          if [ "$TAG_VERSION_NO_V" != "$PACKAGE_VERSION" ]; then
+            echo "❌ Error: Tag version ($TAG_VERSION_NO_V) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+
+          echo "✅ Version match confirmed!"
+
+      - name: Publish to npm
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## 🎉 Release ${{ github.ref_name }}
+
+            ### 📦 Installation
+            ```bash
+            npm install -g bumpster@${{ github.ref_name }}
+            ```
+
+            ### 🔗 Links
+            - [npm package](https://www.npmjs.com/package/bumpster)
+            - [Changelog](https://github.com/${{ github.repository }}/compare/previous-tag...${{ github.ref_name }})
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
