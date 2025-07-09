@@ -70,9 +70,27 @@ describe('EventBus', () => {
         content: 'test',
       };
 
-      eventBus.on(EventType.PARSE_START, () => results.push(1), { priority: 1 });
-      eventBus.on(EventType.PARSE_START, () => results.push(3), { priority: 3 });
-      eventBus.on(EventType.PARSE_START, () => results.push(2), { priority: 2 });
+      eventBus.on(
+        EventType.PARSE_START,
+        () => {
+          results.push(1);
+        },
+        { priority: 1 }
+      );
+      eventBus.on(
+        EventType.PARSE_START,
+        () => {
+          results.push(3);
+        },
+        { priority: 3 }
+      );
+      eventBus.on(
+        EventType.PARSE_START,
+        () => {
+          results.push(2);
+        },
+        { priority: 2 }
+      );
 
       await eventBus.emit(EventType.PARSE_START, eventData);
 

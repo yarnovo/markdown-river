@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx demo/index.ts",
     "copy-dist": "node scripts/copy-dist-to-demo.js",
     "demo": "npm run build && npm run copy-dist && serve demo -p 3000",
