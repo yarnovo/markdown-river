@@ -1,0 +1,9 @@
+{
+  "enableMetrics": true,
+  "debug": true,
+  "bufferDelay": 200,
+  "inputDelay": 20,
+  "styleMap": {
+    "strong": "font-bold"
+  }
+}

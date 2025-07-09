@@ -354,6 +354,119 @@
       background: #e1e4e8; 
       margin: 24px 0;
     }
+
+    /* 新的布局样式 */
+    .input-section {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .input-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e1e4e8;
+      background: #f6f8fa;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .input-header h3 {
+      margin: 0;
+      color: #24292e;
+      font-size: 1.1em;
+    }
+
+    .input-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-controls button {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .input-content {
+      padding: 0;
+    }
+
+    #sourceInput {
+      width: 100%;
+      height: 150px;
+      border: none;
+      outline: none;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      background: white;
+      border-radius: 0 0 8px 8px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .buffer-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .buffer-control label {
+      font-size: 14px;
+      color: #586069;
+      font-weight: 500;
+    }
+
+    .buffer-control input {
+      width: 120px;
+    }
+
+    .buffer-control span {
+      font-size: 14px;
+      color: #0366d6;
+      font-weight: 500;
+      min-width: 50px;
+    }
+
+    .input-display {
+      min-height: 100%;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      background: #f8f9fa;
+      border-radius: 4px;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid #e1e4e8;
+    }
+
+    .input-display.streaming {
+      border-color: #0366d6;
+      background: #f1f8ff;
+    }
+
+    .input-display .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #0366d6;
+      margin-left: 1px;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    #stopBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -362,17 +475,37 @@
     <p>流式 Markdown 渲染器演示 - 解决 AI 聊天中的格式符号闪烁问题</p>
   </div>
   
+  <!-- 上方输入区域 -->
+  <div class="input-section">
+    <div class="input-header">
+      <h3>📝 准备输入的 Markdown 内容</h3>
+      <div class="input-controls">
+        <button id="sampleBtn">加载示例</button>
+        <button id="clearInputBtn">清空输入</button>
+      </div>
+    </div>
+    <div class="input-content">
+      <textarea id="sourceInput" placeholder="在这里输入要演示的 Markdown 文本..."></textarea>
+    </div>
+  </div>
+
+  <!-- 控制面板 -->
   <div class="controls">
     <div class="controls-row">
       <button id="streamBtn" class="primary">开始流式输入</button>
-      <button id="clearBtn" class="danger">清空内容</button>
-      <button id="sampleBtn">加载示例</button>
-      <button id="resetBtn">重置渲染器</button>
+      <button id="stopBtn" class="danger" disabled>停止输入</button>
+      <button id="resetBtn">重置演示</button>
       
       <div class="speed-control">
         <label for="speed">输入速度：</label>
         <input type="range" id="speed" min="10" max="200" value="50">
         <span id="speedValue">50ms</span>
+      </div>
+      
+      <div class="buffer-control">
+        <label for="bufferDelay">缓冲延迟：</label>
+        <input type="range" id="bufferDelay" min="0" max="1000" value="200">
+        <span id="bufferDelayValue">200ms</span>
       </div>
     </div>
     
@@ -402,11 +535,12 @@
     </div>
   </div>
   
+  <!-- 下方演示区域 -->
   <div class="container">
     <div class="panel">
-      <div class="panel-header">📝 Markdown 输入</div>
+      <div class="panel-header">⚡ 流式输入过程</div>
       <div class="panel-content">
-        <textarea id="input" placeholder="在这里输入 Markdown 文本，然后点击"开始流式输入"体验流式渲染效果..."></textarea>
+        <div id="inputDisplay" class="input-display"></div>
       </div>
     </div>
     
