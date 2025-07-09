@@ -8,13 +8,13 @@
  * 4. 处理错误和异常情况
  */
 
-import { EventBus } from './infrastructure/event-bus';
-import { BufferManager } from './core/buffer-manager';
-import { IncrementalParser } from './core/incremental-parser';
-import { RenderScheduler } from './core/render-scheduler';
-import { DOMManager } from './infrastructure/dom-manager';
-import { StyleProcessor } from './infrastructure/style-processor';
-import type { Token } from './types/parser-events';
+import { EventBus } from './infrastructure/event-bus.js';
+import { BufferManager } from './core/buffer-manager.js';
+import { IncrementalParser } from './core/incremental-parser.js';
+import { RenderScheduler } from './core/render-scheduler.js';
+import { DOMManager } from './infrastructure/dom-manager.js';
+import { StyleProcessor } from './infrastructure/style-processor.js';
+import type { Token } from './types/parser-events.js';
 
 import {
   RendererOptions,
@@ -24,7 +24,7 @@ import {
   RenderEndEventData,
   RenderErrorEventData,
   RenderProgressEventData,
-} from './types/renderer-events';
+} from './types/renderer-events.js';
 
 /**
  * 流式 Markdown 渲染器主类

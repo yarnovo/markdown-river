@@ -2,7 +2,7 @@
  * 渲染器事件类型定义
  */
 
-import { BaseEventData } from './events';
+import { BaseEventData } from './events.js';
 
 /**
  * 渲染器状态

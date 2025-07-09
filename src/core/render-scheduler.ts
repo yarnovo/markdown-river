@@ -8,16 +8,16 @@
  * 4. 自适应速率控制
  */
 
-import { EventBus } from '../infrastructure/event-bus';
-import { DOMManager } from '../infrastructure/dom-manager';
-import { Token, TokenType } from '../types/parser-events';
+import { EventBus } from '../infrastructure/event-bus.js';
+import { DOMManager } from '../infrastructure/dom-manager.js';
+import { Token, TokenType } from '../types/parser-events.js';
 import {
   SchedulerOptions,
   SchedulerState,
   BatchInfo,
   RateInfo,
   SchedulerStats,
-} from '../types/scheduler-events';
+} from '../types/scheduler-events.js';
 
 /**
  * 批次项

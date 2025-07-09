@@ -7,13 +7,13 @@
  * 3. 提供高效的读取和写入接口
  */
 
-import { EventBus } from '../infrastructure/event-bus';
+import { EventBus } from '../infrastructure/event-bus.js';
 import {
   BufferWriteEventData,
   BufferReadEventData,
   BufferBacktrackEventData,
   BufferClearEventData,
-} from '../types/buffer-events';
+} from '../types/buffer-events.js';
 
 export interface BufferManagerOptions {
   /**

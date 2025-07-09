@@ -8,13 +8,13 @@
  * 4. 异步批处理，优化渲染性能
  */
 
-import { EventBus } from './event-bus';
+import { EventBus } from './event-bus.js';
 import {
   DOMCreateEventData,
   DOMUpdateEventData,
   DOMRemoveEventData,
   DOMBatchUpdateEventData,
-} from '../types/dom-events';
+} from '../types/dom-events.js';
 
 /**
  * DOM 节点配置

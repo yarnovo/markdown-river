@@ -1,4 +1,4 @@
-import { BaseEventData } from './events';
+import { BaseEventData } from './events.js';
 
 /**
  * 缓冲管理器写入事件数据

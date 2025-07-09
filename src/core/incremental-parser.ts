@@ -8,8 +8,8 @@
  * 4. 处理流式输入
  */
 
-import { EventBus } from '../infrastructure/event-bus';
-import { BufferManager } from './buffer-manager';
+import { EventBus } from '../infrastructure/event-bus.js';
+import { BufferManager } from './buffer-manager.js';
 import {
   Token,
   TokenType,
@@ -17,7 +17,7 @@ import {
   ParserState,
   ParserContext,
   ContextType,
-} from '../types/parser-events';
+} from '../types/parser-events.js';
 
 /**
  * 解析器配置选项

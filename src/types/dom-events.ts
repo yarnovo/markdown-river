@@ -2,7 +2,7 @@
  * DOM 管理器相关事件的数据类型定义
  */
 
-import { BaseEventData } from './events';
+import { BaseEventData } from './events.js';
 
 /**
  * DOM 节点创建事件数据

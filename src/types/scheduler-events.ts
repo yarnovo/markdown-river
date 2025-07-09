@@ -2,8 +2,8 @@
  * 渲染调度器事件类型定义
  */
 
-import { BaseEventData } from './events';
-import { Token } from './parser-events';
+import { BaseEventData } from './events.js';
+import { Token } from './parser-events.js';
 
 /**
  * 调度状态

@@ -2,7 +2,7 @@
  * 增量解析器事件类型定义
  */
 
-import { BaseEventData } from './events';
+import { BaseEventData } from './events.js';
 
 /**
  * 令牌类型枚举

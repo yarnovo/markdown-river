@@ -3,21 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown River Demo</title>
+  <title>Markdown River Demo - 流式渲染演示</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 20px;
-      background-color: #f5f5f5;
+      background-color: #f8f9fa;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      color: #24292e;
+      margin: 0 0 10px 0;
+      font-size: 2.5em;
+    }
+    
+    .header p {
+      color: #586069;
+      font-size: 1.1em;
+      margin: 0;
     }
     
     .container {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
-      height: calc(100vh - 200px);
+      margin-bottom: 20px;
     }
     
     .panel {
@@ -26,6 +43,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
+      min-height: 500px;
     }
     
     .panel-header {
@@ -33,6 +51,8 @@
       border-bottom: 1px solid #e1e4e8;
       font-weight: 600;
       color: #24292e;
+      background: #f6f8fa;
+      border-radius: 8px 8px 0 0;
     }
     
     .panel-content {
@@ -50,21 +70,38 @@
       font-size: 14px;
       line-height: 1.6;
       resize: none;
+      background: #f6f8fa;
+      border-radius: 4px;
+      padding: 10px;
     }
     
     #output {
       min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
     }
     
     .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+    }
+    
+    .controls-row {
       display: flex;
-      gap: 10px;
+      gap: 15px;
       align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .controls-row:last-child {
+      margin-bottom: 0;
     }
     
     button {
-      padding: 8px 16px;
+      padding: 10px 20px;
       border: 1px solid #d1d5da;
       border-radius: 6px;
       background: #fafbfc;
@@ -72,6 +109,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
+      font-weight: 500;
     }
     
     button:hover {
@@ -83,23 +121,25 @@
       background: #edeff2;
     }
     
-    .metrics {
-      font-size: 12px;
-      color: #586069;
-      margin-left: auto;
+    button.primary {
+      background: #0366d6;
+      color: white;
+      border-color: #0366d6;
     }
     
-    .status {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 5px;
+    button.primary:hover {
+      background: #0250b5;
     }
     
-    .status.good { background: #28a745; }
-    .status.warning { background: #ffc107; }
-    .status.bad { background: #dc3545; }
+    button.danger {
+      background: #dc3545;
+      color: white;
+      border-color: #dc3545;
+    }
+    
+    button.danger:hover {
+      background: #c82333;
+    }
     
     .speed-control {
       display: flex;
@@ -110,55 +150,280 @@
     .speed-control label {
       font-size: 14px;
       color: #586069;
+      font-weight: 500;
     }
     
     .speed-control input {
-      width: 100px;
+      width: 120px;
     }
     
-    h1 {
+    .speed-control span {
+      font-size: 14px;
+      color: #0366d6;
+      font-weight: 500;
+      min-width: 40px;
+    }
+    
+    .status-panel {
+      background: #f8f9fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 4px;
+      padding: 15px;
+      margin-left: auto;
+      min-width: 300px;
+    }
+    
+    .status-title {
+      font-weight: 600;
       color: #24292e;
-      margin: 0 0 20px 0;
+      margin-bottom: 10px;
     }
     
-    .md-temporary {
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      color: #586069;
+    }
+    
+    .status-value {
+      color: #0366d6;
+      font-weight: 500;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .status-indicator.idle { background: #6c757d; }
+    .status-indicator.rendering { background: #28a745; }
+    .status-indicator.ended { background: #0366d6; }
+    .status-indicator.error { background: #dc3545; }
+    
+    .logs-panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+    
+    .logs-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e1e4e8;
+      font-weight: 600;
+      color: #24292e;
+      background: #f6f8fa;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logs-content {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 12px;
+      background: #f8f9fa;
+    }
+    
+    .log-entry {
+      margin-bottom: 2px;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    
+    .log-entry.info {
+      color: #0366d6;
+      background: #f1f8ff;
+    }
+    
+    .log-entry.success {
+      color: #28a745;
+      background: #f0fff4;
+    }
+    
+    .log-entry.warning {
+      color: #ffc107;
+      background: #fff3cd;
+    }
+    
+    .log-entry.error {
+      color: #dc3545;
+      background: #f8d7da;
+    }
+    
+    .log-timestamp {
       opacity: 0.7;
-      background-color: #fff3cd;
+      margin-right: 8px;
+    }
+    
+    /* Markdown 样式 */
+    #output h1 { 
+      color: #24292e; 
+      border-bottom: 1px solid #e1e4e8; 
+      padding-bottom: 10px; 
+      margin-bottom: 16px;
+    }
+    
+    #output h2 { 
+      color: #24292e; 
+      border-bottom: 1px solid #e1e4e8; 
+      padding-bottom: 8px; 
+      margin-bottom: 16px;
+    }
+    
+    #output h3 { 
+      color: #24292e; 
+      margin-bottom: 12px;
+    }
+    
+    #output p { 
+      margin-bottom: 16px; 
+      color: #24292e;
+    }
+    
+    #output strong { 
+      font-weight: 600; 
+      color: #24292e;
+    }
+    
+    #output em { 
+      font-style: italic; 
+      color: #586069;
+    }
+    
+    #output code { 
+      background: #f6f8fa; 
+      padding: 2px 4px; 
+      border-radius: 3px; 
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 85%;
+    }
+    
+    #output pre { 
+      background: #f6f8fa; 
+      padding: 16px; 
+      border-radius: 6px; 
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+    
+    #output ul, #output ol { 
+      margin-bottom: 16px; 
+      padding-left: 20px;
+    }
+    
+    #output li { 
+      margin-bottom: 4px; 
+    }
+    
+    #output blockquote { 
+      border-left: 4px solid #e1e4e8; 
+      padding-left: 16px; 
+      margin-left: 0; 
+      color: #586069;
+      font-style: italic;
+    }
+    
+    #output a { 
+      color: #0366d6; 
+      text-decoration: none;
+    }
+    
+    #output a:hover { 
+      text-decoration: underline;
+    }
+    
+    #output hr { 
+      border: 0; 
+      height: 1px; 
+      background: #e1e4e8; 
+      margin: 24px 0;
     }
   </style>
 </head>
 <body>
-  <h1>Markdown River - 流式渲染演示</h1>
+  <div class="header">
+    <h1>🌊 Markdown River</h1>
+    <p>流式 Markdown 渲染器演示 - 解决 AI 聊天中的格式符号闪烁问题</p>
+  </div>
   
   <div class="controls">
-    <button id="streamBtn">开始流式输入</button>
-    <button id="clearBtn">清空</button>
-    <button id="sampleBtn">加载示例</button>
-    <div class="speed-control">
-      <label for="speed">输入速度：</label>
-      <input type="range" id="speed" min="10" max="200" value="50">
-      <span id="speedValue">50ms</span>
+    <div class="controls-row">
+      <button id="streamBtn" class="primary">开始流式输入</button>
+      <button id="clearBtn" class="danger">清空内容</button>
+      <button id="sampleBtn">加载示例</button>
+      <button id="resetBtn">重置渲染器</button>
+      
+      <div class="speed-control">
+        <label for="speed">输入速度：</label>
+        <input type="range" id="speed" min="10" max="200" value="50">
+        <span id="speedValue">50ms</span>
+      </div>
     </div>
-    <div class="metrics">
-      <span class="status good"></span>
-      <span id="metrics">准备就绪</span>
+    
+    <div class="controls-row">
+      <div class="status-panel">
+        <div class="status-title">渲染器状态</div>
+        <div class="status-item">
+          <span class="status-label">状态：</span>
+          <span class="status-value">
+            <span id="statusIndicator" class="status-indicator idle"></span>
+            <span id="statusText">空闲</span>
+          </span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">处理字符：</span>
+          <span id="charCount" class="status-value">0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">渲染时间：</span>
+          <span id="renderTime" class="status-value">0ms</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">错误次数：</span>
+          <span id="errorCount" class="status-value">0</span>
+        </div>
+      </div>
     </div>
   </div>
   
   <div class="container">
     <div class="panel">
-      <div class="panel-header">Markdown 输入</div>
+      <div class="panel-header">📝 Markdown 输入</div>
       <div class="panel-content">
-        <textarea id="input" placeholder="在这里输入 Markdown 文本..."></textarea>
+        <textarea id="input" placeholder="在这里输入 Markdown 文本，然后点击"开始流式输入"体验流式渲染效果..."></textarea>
       </div>
     </div>
     
     <div class="panel">
-      <div class="panel-header">实时渲染输出</div>
+      <div class="panel-header">🎨 实时渲染输出</div>
       <div class="panel-content">
         <div id="output"></div>
       </div>
     </div>
+  </div>
+  
+  <div class="logs-panel">
+    <div class="logs-header">
+      📋 系统日志
+      <button id="clearLogsBtn">清空日志</button>
+    </div>
+    <div class="logs-content" id="logs"></div>
   </div>
   
   <script type="module" src="./index.js"></script>
