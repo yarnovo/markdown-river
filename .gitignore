@@ -15,7 +15,6 @@ coverage/
 .test-repos/
 tmp/
 
-.claude_memory_cache.json
 .claude_logs/
 
 .todo/
