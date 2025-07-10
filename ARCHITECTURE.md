@@ -2,586 +2,498 @@
 
 ## 1. 系统概述
 
-Markdown River 是一个专门解决流式 Markdown 渲染闪烁问题的前端库。它通过**乐观更新**策略和快照驱动的渲染，避免格式符号的视觉闪烁。
+Markdown River 是一个专注于解决流式 Markdown 渲染闪烁问题的轻量级库。通过智能缓冲策略和成熟的开源组件，提供简单可靠的解决方案。
 
-### 1.1 设计目标
+### 1.1 设计理念
 
-- **无闪烁渲染**：格式符号不会先显示后消失
-- **实时响应**：每个输入立即产生输出
-- **乐观更新**：预测用户意图，提前渲染
-- **快照驱动**：每个状态都是完整的 DOM 快照
-- **事件解耦**：组件间通过事件总线通信
+**简单可靠，不重复造轮子**
 
-### 1.2 核心理念
+- 使用 **marked** 进行 Markdown 解析
+- 使用 **html-react-parser** 优化 React 渲染
+- 使用 **mitt** 实现事件系统
+- 专注于解决缓冲策略这一核心问题
 
-**乐观更新，快照驱动**
+### 1.2 核心目标
 
-- 看到 `*` 就预测是斜体，看到 `**` 就预测是加粗
-- 每个字符输入都产生一个完整的 DOM 快照
-- 通过 DOM Diff 计算最小更新操作
-- 预期违背时立即修正，减少视觉跳动
+- **消除闪烁**：通过缓冲避免格式符号的显示/隐藏跳变
+- **保持流畅**：双阈值策略确保输出的连续性
+- **简单集成**：最小化 API，易于集成到任何项目
+- **框架无关**：核心库不依赖特定框架
 
-## 2. V2 架构设计
+## 2. 架构设计
 
-### 2.1 架构概览
-
-系统采用分层的事件驱动架构：
+### 2.1 整体架构
 
 ```mermaid
 graph TB
-    subgraph "对外接口层"
-        SR[StreamingRendererV2<br/>集成模块，对外 API]
+    subgraph "应用层"
+        A1[React App]
+        A2[原生 JavaScript]
+        A3[其他框架]
     end
 
-    subgraph "核心组件层"
-        OP[乐观解析器<br/>OptimisticParser<br/>预测格式]
-        SNR[快照渲染器<br/>SnapshotRenderer<br/>生成快照]
-        DD[DOM Diff<br/>计算差异]
+    subgraph "框架适配层"
+        D1[useMarkdownRiver Hook]
     end
 
-    subgraph "基础设施层"
-        EB[事件总线<br/>EventBus<br/>核心通信机制]
-        SP[StyleProcessorV2<br/>样式处理]
-        DM[DOMManagerV2<br/>DOM 操作]
+    subgraph "Markdown River 核心"
+        B1[对外 API]
+        B2[缓存管理器]
+        B3[歧义检测策略]
+        B4[Markdown 解析器]
+        B5[事件发射器]
     end
 
-    %% 接口层连接
-    SR -.->|"write()方法<br/>调用"| OP
-    SR -.->|"内部监听<br/>dom:operations事件"| EB
-    SR -->|"调用执行<br/>DOM操作"| DM
+    subgraph "依赖库"
+        C1[marked]
+        C2[mitt]
+        C3[html-react-parser]
+    end
 
-    %% 核心组件间的事件流
-    OP -->|"发送<br/>parser:token事件"| EB
-    EB -->|"传递<br/>parser:token"| SNR
-    SNR -->|"发送<br/>snapshot:updated事件"| EB
-    EB -->|"传递<br/>snapshot:updated"| DD
-    DD -->|"发送<br/>dom:operations事件"| EB
-    EB -->|"传递<br/>dom:operations"| SR
+    A1 --> D1
+    A2 --> B1
+    A3 --> B1
 
-    %% 依赖注入
-    SP -.->|"构造时注入<br/>提供样式映射"| SNR
-    SP -.->|"构造时注入<br/>提供样式映射"| SR
+    D1 --> B1
+    D1 --> C3
+
+    B1 --> B2
+    B2 --> B3
+    B3 --> B4
+    B4 --> B5
+
+    B4 --> C1
+    B5 --> C2
 ```
 
-#### 架构说明
-
-**对外接口层**：
-
-- **StreamingRendererV2** 是整个系统的入口，提供 `write()` 方法供外部调用
-- 每次调用 `write()` 方法，它会直接调用乐观解析器处理输入字符
-
-**核心组件层**（三个组件平行，通过事件通信）：
-
-1. **乐观解析器**：每次被调用都会生成一个令牌（token），通过 `parser:token` 事件发送
-2. **快照渲染器**：内部监听 `parser:token` 事件，每个令牌都会生成完整的 DOM 快照，通过 `snapshot:updated` 事件发送
-3. **DOM Diff**：内部监听 `snapshot:updated` 事件，计算与上一个快照的差异，通过 `dom:operations` 事件发送操作指令
-
-**基础设施层**：
-
-- **事件总线**：所有事件的中转站，组件间不直接依赖，全部通过事件解耦
-- **样式处理器**：在构造时注入到快照渲染器，提供标签到 CSS 类的映射
-- **DOM 管理器**：被 StreamingRendererV2 直接调用，执行实际的 DOM 操作
-
-**关键流程**：
-
-1. 用户调用 `write('*')` → StreamingRendererV2 调用乐观解析器
-2. 乐观解析器生成 `ITALIC_START` 令牌 → 发送 `parser:token` 事件
-3. 快照渲染器收到事件 → 生成包含 `<em>` 标签的快照 → 发送 `snapshot:updated` 事件
-4. DOM Diff 收到事件 → 计算需要创建 `<em>` 元素 → 发送 `dom:operations` 事件
-5. StreamingRendererV2 收到事件 → 调用 DOMManagerV2 → 真实 DOM 更新
-
-### 2.2 组件关系
-
-核心组件层的三个模块（乐观解析器、快照渲染器、DOM Diff）处于同一层级，通过事件总线解耦通信：
-
-```mermaid
-sequenceDiagram
-    participant User as 用户输入
-    participant SR as StreamingRendererV2
-    participant OP as 乐观解析器
-    participant EB as 事件总线
-    participant SNR as 快照渲染器
-    participant DD as DOM Diff
-    participant DM as DOMManagerV2
-    participant DOM as 真实 DOM
-
-    User->>SR: write('*')
-    SR->>OP: processChar('*')
-    OP->>EB: emit('parser:token', {type: 'ITALIC_START'})
-    EB->>SNR: 传递 parser:token 事件
-    SNR->>SNR: 生成新的 DOM 快照
-    SNR->>EB: emit('snapshot:updated', {snapshot, version})
-    EB->>DD: 传递 snapshot:updated 事件
-    DD->>DD: 计算与上一个快照的差异
-    DD->>EB: emit('dom:operations', {operations})
-    EB->>SR: 传递 dom:operations 事件
-    SR->>DM: applyOperations(operations)
-    DM->>DOM: 创建 <em> 元素
-```
-
-### 2.3 数据流详解
-
-#### 2.3.1 事件流动图
+### 2.2 数据流
 
 ```mermaid
 flowchart LR
-    subgraph "输入层"
-        INPUT[字符输入]
-    end
+    A[字符输入] --> B[追加到缓存]
+    B --> C[歧义检测]
+    C -->|有歧义| D[继续等待]
+    C -->|无歧义| E[解析未处理部分]
 
-    subgraph "解析层"
-        INPUT --> OP[乐观解析器]
-        OP --> TOKEN[parser:token 事件]
-    end
+    D --> A
+    E --> F[marked 解析]
+    F --> G[生成 HTML]
+    G --> H[触发事件]
+    H --> I[UI 更新]
 
-    subgraph "渲染层"
-        TOKEN --> SNR[快照渲染器]
-        SNR --> SNAP[snapshot:updated 事件]
-    end
-
-    subgraph "差分层"
-        SNAP --> DD[DOM Diff]
-        DD --> OPS[dom:operations 事件]
-    end
-
-    subgraph "执行层"
-        OPS --> DM[DOMManagerV2]
-        DM --> DOM[真实 DOM]
-    end
+    J["end() 调用"] --> K[强制解析全部]
+    K --> F
 ```
 
-#### 2.3.2 阶段详解
+### 2.3 核心组件说明
 
-1. **字符输入阶段**
-   - 用户输入字符通过 `write()` 方法进入系统
-   - 乐观解析器逐字符处理，生成令牌
+#### 2.3.1 React Hook 适配层
 
-2. **令牌处理阶段**
-   - 乐观解析器发出 `parser:token` 事件
-   - 快照渲染器接收令牌，更新内部 DOM 树表示
+**职责**：为 React 应用提供便捷的集成方式
 
-3. **快照生成阶段**
-   - 快照渲染器生成完整的 DOM 快照
-   - 发出 `snapshot:updated` 事件，包含新快照和版本号
+**useMarkdownRiver Hook 特性**：
 
-4. **差异计算阶段**
-   - DOM Diff 接收快照事件
-   - 比较新旧快照，生成操作指令
+- 封装了核心 API，提供 React 友好的接口
+- 自动管理生命周期（创建和销毁）
+- 集成 html-react-parser，输出优化的 React 元素
+- 状态管理，自动触发组件重渲染
 
-5. **DOM 更新阶段**
-   - StreamingRendererV2 接收操作事件
-   - 调用 DOMManagerV2 执行操作
-   - 直接操作真实 DOM，无批处理
-
-## 3. 核心组件设计
-
-### 3.1 乐观解析器（OptimisticParser）
-
-**职责**：实现真正的乐观更新，立即做出格式预测
-
-**核心特性**：
-
-- **无 POTENTIAL 状态**：看到格式符号立即预测
-- **预期管理**：看到第一个 `*` 时进入 `EXPECT_BOLD_SECOND` 状态，期待下一个字符也是 `*` 来确认加粗格式
-- **违背处理**：如果下一个字符不是 `*`，立即修正为斜体格式（用户会看到格式变化，但避免了符号闪烁）
-
-**状态机图**：
-
-```mermaid
-stateDiagram-v2
-    [*] --> NORMAL: 初始状态
-
-    NORMAL --> EXPECT_BOLD_SECOND: 遇到 *
-    EXPECT_BOLD_SECOND --> IN_BOLD: 遇到第二个 *
-    EXPECT_BOLD_SECOND --> IN_ITALIC: 遇到其他字符
-
-    IN_BOLD --> ENDING_BOLD: 遇到 *
-    ENDING_BOLD --> NORMAL: 遇到第二个 *
-    ENDING_BOLD --> IN_BOLD: 遇到其他字符
-
-    IN_ITALIC --> NORMAL: 遇到 *
-    IN_ITALIC --> IN_ITALIC: 遇到其他字符
-
-    NORMAL --> NORMAL: 普通字符
-    IN_BOLD --> IN_BOLD: 普通字符
-
-    note right of EXPECT_BOLD_SECOND
-        乐观预测：期待加粗
-        如果下一个不是 *
-        则修正为斜体
-    end note
-```
-
-#### 设计原则：字符-令牌对应
-
-**核心原则**：每个输入字符都必须产生对应的令牌输出，不能"吞掉"字符。
-
-这个原则确保了：
-
-1. 输入输出的一致性
-2. 用户感知的连续性
-3. 调试的可预测性
-
-#### 预期管理示例
-
-**场景1：用户输入加粗文本 `**bold**`**
-
-```
-输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
-输入: *        状态: EXPECT_BOLD_SECOND → IN_BOLD   输出: CORRECTION_TO_BOLD_START (一对一修正)
-输入: b        状态: IN_BOLD                       输出: TEXT('b')
-输入: o        状态: IN_BOLD                       输出: TEXT('o')
-输入: l        状态: IN_BOLD                       输出: TEXT('l')
-输入: d        状态: IN_BOLD                       输出: TEXT('d')
-输入: *        状态: IN_BOLD → ENDING_BOLD          输出: BOLD_END (index: 1)
-输入: *        状态: ENDING_BOLD → NORMAL           输出: BOLD_END (index: 2)
-```
-
-**场景2：用户输入斜体文本 `*italic*`（后跟空格）**
-
-```
-输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
-输入: i        状态: EXPECT_BOLD_SECOND → IN_ITALIC 输出: TEXT('i') (确认预测)
-输入: t        状态: IN_ITALIC                     输出: TEXT('t')
-输入: a        状态: IN_ITALIC                     输出: TEXT('a')
-输入: l        状态: IN_ITALIC                     输出: TEXT('l')
-输入: i        状态: IN_ITALIC                     输出: TEXT('i')
-输入: c        状态: IN_ITALIC                     输出: TEXT('c')
-输入: *        状态: IN_ITALIC → ENDING_ITALIC     输出: 无 (等待确认)
-输入: (空格)   状态: ENDING_ITALIC → NORMAL        输出: ITALIC_END + TEXT(' ')
-```
-
-**设计原理**：斜体结束需要等待确认字符，这是为了支持嵌套语法，如：
-
-- `*italic with **bold** inside*` - 斜体中嵌套加粗
-- `**bold with *italic* inside**` - 加粗中嵌套斜体
-
-如果第二个 `*` 立即结束斜体，就无法正确解析这些嵌套情况。
-
-**场景3：预期违背 `* hello`**
-
-```
-输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
-输入: (空格)   状态: EXPECT_BOLD_SECOND → NORMAL     输出: CORRECTION_TO_TEXT_SPACE (一对一修正)
-输入: h        状态: NORMAL                        输出: TEXT('h')
-```
-
-**关键洞察**：
-
-- **字符-令牌一对一原则**：每个字符输入产生唯一的令牌输出
-- **乐观预测**：第一个 `*` 立即输出 `ITALIC_START`
-- **修正令牌**：使用复合令牌（如 `CORRECTION_TO_BOLD_START`）实现一对一修正
-- **索引化令牌**：多字符序列（如 `**`）通过索引区分，确保一对一原则
-- **零延迟**：用户立即看到格式效果，不需要等待确认
-- **信息无丢失**：所有语义信息都被保留在令牌中
-- **乐观完成**：在不确定的情况下保持格式，而不是回退到普通文本
-
-#### 修正令牌设计
-
-为了保证字符-令牌一对一原则，设计了以下修正令牌：
-
-- `CORRECTION_TO_BOLD_START`：撤销 `ITALIC_START`，改为 `BOLD_START`
-- `CORRECTION_TO_TEXT_SPACE`：撤销 `ITALIC_START`，改为 `*` + `空格`
-- `CORRECTION_TO_LINE_BREAK`：撤销 `ITALIC_START`，改为 `*` + `换行`
-
-#### 索引化令牌设计
-
-为了处理多字符序列（如 `**`），设计了索引化令牌：
-
-- `{ type: 'BOLD_END', index: 1 }`：第一个结束标记 `*`
-- `{ type: 'BOLD_END', index: 2 }`：第二个结束标记 `*`
-
-渲染器根据索引决定实际处理逻辑：
-
-- `index: 1` 时：准备结束，但不执行操作
-- `index: 2` 时：真正结束加粗格式
-
-每个令牌都包含完整的语义信息，渲染器可以据此做出正确的处理动作。
-
-### 3.2 快照渲染器（SnapshotRenderer）
-
-**职责**：将令牌流转换为 DOM 快照
-
-**核心特性**：
-
-- **完整快照**：每次都生成完整的 DOM 树结构
-- **样式集成**：与 StyleProcessorV2 集成，包含样式信息
-- **版本管理**：每个快照都有唯一版本号
-
-**快照结构示例**：
-
-```mermaid
-graph TD
-    ROOT[div#content<br/>node-0]
-    P1[p<br/>node-1]
-    TEXT1[text: 'This is '<br/>node-2]
-    STRONG[strong.font-bold<br/>node-3]
-    TEXT2[text: 'bold'<br/>node-4]
-    TEXT3[text: ' text'<br/>node-5]
-
-    ROOT --> P1
-    P1 --> TEXT1
-    P1 --> STRONG
-    P1 --> TEXT3
-    STRONG --> TEXT2
-```
-
-**快照数据结构**：
+**提供的接口**：
 
 ```typescript
-interface DOMSnapshot {
-  nodeId: string;
-  type: 'element' | 'text';
-  tagName?: string;
-  textContent?: string;
-  className?: string;
-  children?: DOMSnapshot[];
+{
+  write: (chunk: string) => void;
+  end: () => void;
+  content: React.ReactNode;  // 解析后的 React 元素
+  rawHtml: string;          // 原始 HTML 字符串
 }
 ```
 
-### 3.3 DOM Diff
+#### 2.3.2 缓存管理器（Cache Manager）
 
-**职责**：计算快照差异，生成最小操作集
+**职责**：管理全量内容缓存和解析位置
 
-**核心特性**：
+**核心功能**：
 
-- **高效算法**：只计算必要的 DOM 更新
-- **操作类型**：create、update、delete、move
-- **树形对比**：递归比较节点树
+- 维护完整的输入历史（全量缓存）
+- 跟踪已解析位置（lastParsedIndex）
+- 提供未解析内容的访问接口
+- 管理流状态（未开始/进行中/已结束）
 
-**差异计算示例**：
+#### 2.3.3 歧义检测策略（Ambiguity Detection Strategy）
+
+**职责**：基于全量上下文判断是否存在歧义
+
+**接口设计**：
+
+```typescript
+interface ParseStrategy {
+  // 接收全量内容和已解析位置
+  hasAmbiguity(fullContent: string, lastParsedIndex: number): boolean;
+
+  // 返回可以安全解析的位置
+  getSafeParseIndex(fullContent: string, lastParsedIndex: number): number;
+}
+```
+
+**策略特点**：
+
+- 可以访问全量内容，不限于未解析部分
+- 自主决定检测范围和方式
+- 支持不同场景的定制策略
+
+#### 2.3.4 Markdown 解析器
+
+**职责**：解析确定无歧义的内容
+
+**特点**：
+
+- 基于 marked 库，功能完整且稳定
+- 每次只解析新增的无歧义部分
+- 支持 GFM（GitHub Flavored Markdown）
+- 可通过配置扩展功能
+
+#### 2.3.5 事件发射器
+
+**职责**：提供轻量级的事件系统
+
+**基于 mitt 实现**：
+
+- 体积小（200 bytes）
+- TypeScript 友好
+- 支持通配符监听
+- 无依赖
+
+## 3. 缓存与解析策略
+
+### 3.1 核心概念定义
+
+| 术语           | 定义                     | 说明                   |
+| -------------- | ------------------------ | ---------------------- |
+| **缓存区**     | 存储全量上下文的区域     | 保存所有输入的累积内容 |
+| **未解析部分** | 新增但尚未解析的内容     | 类似进度条新增的部分   |
+| **已解析部分** | 已经处理并输出的内容     | 已经确定格式的部分     |
+| **歧义状态**   | 当前内容存在多种解释可能 | 需要更多上下文才能确定 |
+| **解析位置**   | 当前已解析内容的结束位置 | 标记解析进度           |
+
+### 3.2 为什么需要缓存？
+
+在流式渲染场景下，逐字符渲染会导致格式符号闪烁：
+
+```
+未缓存的渲染过程：
+字符流: * i t a l i c *
+屏幕显示变化:
+1. "*"         (显示星号)
+2. "*i"        (显示星号和字母)
+3. "*it"       (继续显示)
+...
+7. "*italic*"  (突然识别为斜体，星号消失)
+结果：用户看到星号先出现后消失的闪烁
+```
+
+### 3.3 智能缓存机制
+
+**核心理念**：基于全量上下文进行歧义检测，只有歧义消除时才解析输出。
+
+```mermaid
+graph TB
+    A[流状态] --> B[未开始]
+    A --> C[进行中]
+    A --> D[已结束]
+
+    C --> E[新字符到达]
+    E --> F[追加到缓存]
+    F --> G{歧义检测}
+
+    G -->|有歧义| H[继续缓存]
+    G -->|无歧义| I[解析未处理部分]
+
+    H --> E
+    I --> J[更新解析位置]
+    J --> K[输出新内容]
+
+    D --> L["end() 调用"]
+    L --> M[强制解析所有内容]
+```
+
+### 3.4 歧义检测策略
+
+**歧义检测原理**：
+
+- 基于全量上下文进行判断
+- 通常检测末尾字符的格式可能性
+- 采用倒序扫描策略
 
 ```mermaid
 graph LR
-    subgraph "旧快照"
-        O1[p]
-        O2[text: 'Hello *']
-        O1 --> O2
-    end
+    A["缓存内容: Hello *"] --> B{检测末尾}
+    B --> C[发现 * 符号]
+    C --> D{判断歧义}
+    D -->|可能是斜体开始| E[有歧义]
+    D -->|可能是普通星号| E
 
-    subgraph "新快照"
-        N1[p]
-        N2[text: 'Hello ']
-        N3[em]
-        N4[text: '*']
-        N1 --> N2
-        N1 --> N3
-        N3 --> N4
-    end
-
-    subgraph "生成的操作"
-        OP1[update text-1<br/>textContent: 'Hello ']
-        OP2[create em<br/>nodeId: node-3]
-        OP3[create text<br/>nodeId: node-4<br/>parent: node-3]
-        OP4[append node-3<br/>to: node-1]
-    end
-
-    O1 -.-> N1
-    O2 -.-> N2
+    F["缓存内容: Hello *world*"] --> G{检测末尾}
+    G --> H[发现完整格式]
+    H --> I[无歧义]
 ```
 
-**操作数据结构**：
+**常见歧义场景**：
+
+- 单个 `*` 或 `**`：格式标记或普通字符
+- `` ` ``：代码块开始或普通反引号
+- `[`：链接开始或普通方括号
+- 未闭合的格式符号
+
+### 3.5 解析策略接口
 
 ```typescript
-type DOMOperation =
-  | { type: 'create'; node: DOMSnapshot; parentId?: string }
-  | { type: 'update'; nodeId: string; changes: Partial<DOMSnapshot> }
-  | { type: 'delete'; nodeId: string }
-  | { type: 'move'; nodeId: string; newParentId: string; index?: number };
+interface ParseStrategy {
+  // 基于全量上下文判断是否有歧义
+  hasAmbiguity(fullContent: string, lastParsedIndex: number): boolean;
+
+  // 获取可以安全解析的位置
+  getSafeParseIndex(fullContent: string, lastParsedIndex: number): number;
+}
 ```
 
-## 4. 基础设施模块
+### 3.6 工作流程示例
 
-### 4.1 事件总线（EventBus）
+```
+初始状态：
+缓存: ""
+已解析: ""
+未解析: ""
 
-**职责**：提供组件间的解耦通信机制
+输入 "Hello "：
+缓存: "Hello "
+已解析: "Hello "  （无歧义，立即解析）
+未解析: ""
 
-**特性**：
+输入 "*"：
+缓存: "Hello *"
+已解析: "Hello "  （末尾有歧义，暂不解析）
+未解析: "*"
 
-- 支持优先级
-- 支持过滤器
-- 异步事件处理
-- 错误隔离
+输入 "world"：
+缓存: "Hello *world"
+已解析: "Hello "  （仍有歧义，继续等待）
+未解析: "*world"
 
-### 4.2 样式处理器 V2（StyleProcessorV2）
+输入 "*"：
+缓存: "Hello *world*"
+已解析: "Hello *world*"  （歧义消除，解析斜体）
+未解析: ""
+```
 
-**职责**：管理标签到 CSS 类的映射
+### 3.7 关键参数
 
-**特性**：
+- **strategy**: 歧义检测策略 - 可插拔的策略模式
+- **streamState**: 流状态 - 未开始/进行中/已结束
 
-- 主题系统
-- 样式继承
-- 缓存优化
-- 无事件依赖（简化设计）
+**注意**：
 
-### 4.3 DOM 管理器 V2（DOMManagerV2）
+- 没有缓冲区大小限制（全量缓存）
+- 没有超时机制（有歧义就等待）
+- end() 方法会立即消除歧义阻塞
 
-**职责**：执行实际的 DOM 操作
+### 3.8 配置示例
 
-**特性**：
+不同场景下的策略选择：
 
-- 直接 DOM 操作
-- 节点 ID 映射
-- 无批处理（简化设计）
-- 无事件系统（被动执行）
+| 场景     | 策略类型           | 特点               |
+| -------- | ------------------ | ------------------ |
+| AI 对话  | 标准 Markdown 策略 | 平衡各种格式检测   |
+| 代码展示 | 增强代码块检测     | 优先检测代码块边界 |
+| 文档预览 | 保守策略           | 更谨慎的歧义判断   |
 
-## 5. 关键设计决策
+### 3.9 end() API 行为
 
-### 5.1 为什么选择快照驱动？
+当调用 `end()` 方法时：
 
-- **完整性**：每个时刻的 DOM 状态都是完整的
-- **可预测**：状态转换清晰可控
-- **易调试**：可以记录和回放快照历史
+- 立即消除歧义阻塞
+- 强制解析所有未解析内容
+- 将流状态设置为"已结束"
+- 输出最终的完整内容
 
-### 5.2 为什么使用事件解耦？
+## 4. 事件系统
 
-- **灵活性**：组件可以独立开发和测试
-- **扩展性**：易于添加新的处理器
-- **可维护**：降低组件间的耦合度
-
-### 5.3 为什么是乐观更新？
-
-- **用户体验**：立即响应，无延迟感
-- **视觉平滑**：避免格式符号的闪烁问题，用户看到的是格式变化而非符号突然出现消失
-- **性能优化**：减少不必要的渲染
-
-### 5.4 乐观更新的设计哲学
-
-**核心理念：宁可保持格式，不要回退到原始符号**
+### 4.1 事件类型
 
 ```mermaid
-flowchart TD
-    A[遇到格式符号] --> B{能确定格式吗?}
-    B -->|是| C[立即应用格式]
-    B -->|否| D[乐观预测格式]
+graph TB
+    A[MarkdownRiver] -->|发送| B[content:parsed]
+    A -->|发送| C[buffer:status]
 
-    D --> E{后续输入证实?}
-    E -->|是| F[保持预测格式]
-    E -->|否| G[修正到正确格式]
+    B --> D[包含解析后的 HTML]
+    B --> E[包含时间戳]
+    B --> F[包含块索引]
 
-    C --> H[继续解析]
-    F --> H
-    G --> H
-
-    subgraph "关键决策"
-        I[输入结束时<br/>未完成的格式]
-        I --> J[乐观完成格式<br/>而非回退到符号]
-    end
+    C --> G[缓冲状态]
+    C --> H[缓冲区大小]
+    C --> I[触发原因]
 ```
 
-**设计原则**：
+### 4.2 事件流程
 
-1. **预测优于等待**：看到 `*` 立即预测斜体，而不是等待确认
-2. **修正优于撤销**：发现预测错误时修正格式，而不是撤销重来
-3. **完成优于回退**：输入结束时完成格式，而不是回退到原始符号
-4. **连续性优于准确性**：保持用户体验的连续性比100%的解析准确性更重要
+1. **content:parsed** - 内容解析完成
+   - 触发时机：缓冲区刷新并完成解析
+   - 包含数据：HTML 内容、时间戳、块索引
 
-**实际表现**：
+2. **buffer:status** - 缓冲区状态变化
+   - 触发时机：开始缓冲或结束缓冲
+   - 包含数据：缓冲状态、当前大小、触发原因
 
-- 输入 `*italic` 然后结束 → 显示为斜体格式，而不是 "\*italic"
-- 输入 `**bold` 然后结束 → 显示为加粗格式，而不是 "\*\*bold"
-- 输入 `*italic*` 后跟空格 → 修正为普通文本，但过程中用户感知到的是格式变化
+## 5. React 集成优化
 
-这种设计确保了流式渲染的视觉连续性，避免了格式符号的闪烁，提供了更好的用户体验。
+### 5.1 渲染优化原理
+
+```mermaid
+graph TB
+    A[HTML 字符串] -->|html-react-parser| B[React 元素树]
+    B --> C[React Reconciliation]
+    C --> D[计算最小更新]
+    D --> E[更新真实 DOM]
+
+    F[直接使用 innerHTML] --> G[销毁所有 DOM]
+    G --> H[重建所有 DOM]
+```
+
+### 5.2 优化效果
+
+使用 html-react-parser 的优势：
+
+- 将 HTML 转换为 React 元素
+- 保持元素的引用稳定性
+- 利用 React 的 diff 算法
+- 只更新真正变化的部分
 
 ## 6. 性能考虑
 
-### 6.1 优化策略
+### 6.1 累积解析策略
+
+为确保 Markdown 格式的完整性，解析器采用累积策略：
 
 ```mermaid
-flowchart TD
-    subgraph "性能优化关键路径"
-        A[字符输入] --> B{是否格式字符?}
-        B -->|是| C[乐观预测<br/>立即生成令牌]
-        B -->|否| D[普通文本令牌]
+graph LR
+    A["第1块: # Hello"] --> B["累积: # Hello"]
+    C["第2块: World"] --> D["累积: # Hello World"]
+    E["第3块: Bold"] --> F["累积: # Hello World\nBold"]
 
-        C --> E[快照渲染<br/>只更新变化部分]
-        D --> E
-
-        E --> F[DOM Diff<br/>最小化操作集]
-        F --> G{操作数量}
-
-        G -->|少量| H[直接更新 DOM]
-        G -->|大量| I[分批更新<br/>避免阻塞]
-
-        H --> J[渲染完成]
-        I --> J
-    end
+    B --> G[解析结果1]
+    D --> H[解析结果2]
+    F --> I[解析结果3]
 ```
 
-- **增量更新**：DOM Diff 只更新变化的部分
-- **事件批处理**：同步事件在一个循环内处理
-- **样式缓存**：StyleProcessorV2 缓存计算结果
+这确保了跨块的格式（如跨行的代码块）能够正确解析。
 
 ### 6.2 内存管理
 
-- **快照回收**：只保留当前和上一个快照
-- **事件清理**：自动清理一次性监听器
-- **节点映射**：及时清理无用的节点引用
+系统包含多个内存保护机制：
+
+- 最大内容长度限制（默认 1MB）
+- 定时器自动清理
+- 事件监听器管理
+- 销毁时的资源释放
 
 ## 7. 扩展性设计
 
-### 7.1 添加新的解析器
+### 7.1 自定义 marked 配置
 
-只需实现相同的事件接口：
+通过 `markedOptions` 可以扩展解析功能：
 
-- 监听输入事件
-- 发出 `parser:token` 事件
+- 自定义渲染器
+- 代码高亮集成
+- 自定义标记扩展
+- 安全性配置
 
-### 7.2 添加新的渲染策略
+### 7.2 事件扩展
 
-可以替换或扩展快照渲染器：
+基于 mitt 的事件系统支持：
 
-- 监听 `parser:token` 事件
-- 发出 `snapshot:updated` 事件
+- 自定义事件类型
+- 事件拦截和转换
+- 批量事件处理
+- 异步事件处理
 
-### 7.3 自定义样式
+## 8. 错误处理策略
 
-通过 StyleProcessorV2 的主题系统：
+### 8.1 降级机制
 
-- 创建新主题
-- 覆盖默认样式
-- 动态切换主题
+```mermaid
+graph TB
+    A[Markdown 解析] --> B{是否出错?}
+    B -->|否| C[返回 HTML]
+    B -->|是| D[记录错误]
+    D --> E[降级为纯文本]
+    E --> F[包装为 pre 标签]
+    F --> G[返回安全 HTML]
+```
 
-## 8. 未来演进方向
+### 8.2 边界保护
 
-### 8.1 性能优化
+- 输入验证：检查输入类型和长度
+- 解析保护：捕获 marked 异常
+- 事件保护：隔离监听器错误
+- 资源保护：防止内存泄漏
 
-- 实现虚拟滚动支持大文档
-- Web Worker 解析提升性能
-- 增量快照减少内存占用
+## 9. 最佳实践
 
-### 8.2 功能扩展
+### 9.1 参数调优建议
 
-- 支持更多 Markdown 语法
-- 插件系统支持自定义扩展
-- 服务端渲染支持
+1. **分析使用场景**
+   - 输入速度：快速输入需要更大的字符阈值
+   - 网络延迟：高延迟需要更长的时间阈值
+   - 内容类型：代码需要更大的缓冲区
 
-### 8.3 开发体验
+2. **监控和调整**
+   - 使用 buffer:status 事件监控缓冲行为
+   - 根据实际触发频率调整参数
+   - 平衡实时性和稳定性
 
-- 开发者工具支持快照调试
-- 性能分析工具
-- 可视化测试工具
+3. **性能优化**
+   - 避免过小的阈值（频繁渲染）
+   - 避免过大的阈值（响应迟钝）
+   - 根据设备性能适配
 
-## 9. 架构优势总结
+### 9.2 集成建议
+
+1. **错误处理**
+   - 始终监听错误事件
+   - 提供降级展示方案
+   - 记录异常信息
+
+2. **资源管理**
+   - 组件卸载时调用 destroy()
+   - 及时移除事件监听
+   - 避免内存泄漏
+
+3. **用户体验**
+   - 提供加载状态提示
+   - 平滑的过渡效果
+   - 合理的错误提示
+
+## 10. 架构优势总结
 
 ```mermaid
 mindmap
-  root((V2 架构))
-    乐观更新
-      立即响应
-      无闪烁体验
-      预期管理
-    事件驱动
-      组件解耦
-      易于扩展
-      独立测试
-    快照系统
-      完整状态
-      时间旅行
-      易于调试
-    性能优化
-      最小化 DOM 操作
-      增量更新
-      内存高效
+  root((Markdown River))
+    简单性
+      最小 API
+      清晰架构
+      易于理解
+    可靠性
+      成熟组件
+      充分测试
+      错误处理
+    性能
+      智能缓冲
+      批量解析
+      React 优化
+    扩展性
+      插件机制
+      事件系统
+      配置灵活
 ```
+
+通过这种简洁而有效的设计，Markdown River 专注于解决流式渲染的核心问题，为开发者提供一个可靠、易用的解决方案。
