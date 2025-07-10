@@ -1,59 +1,29 @@
 /**
- * V2 架构的事件类型定义
+ * 新架构的事件类型定义
  */
-
-import { Token } from '../core/optimistic-parser.js';
-import { DOMSnapshot, DOMOperation } from '../core/dom-diff.js';
 
 /**
- * 解析器令牌事件
+ * 内容解析事件
  */
-export interface ParserTokenEvent {
-  token: Token;
-  timestamp: number;
+export interface ContentParsedEvent {
+  html: string; // 全量 HTML
+  timestamp: number; // 时间戳
+  chunkIndex: number; // 第几次解析
 }
 
 /**
- * 快照更新事件
+ * 事件映射
  */
-export interface SnapshotUpdatedEvent {
-  snapshot: DOMSnapshot;
-  version: number;
-  timestamp: number;
+export interface MarkdownRiverEventMap {
+  'content:parsed': ContentParsedEvent;
 }
 
 /**
- * 解析器结束事件
+ * 事件类型
  */
-export interface ParserEndEvent {
-  timestamp: number;
-}
+export type EventType = keyof MarkdownRiverEventMap;
 
 /**
- * DOM 操作事件
+ * 事件数据
  */
-export interface DOMOperationsEvent {
-  operations: DOMOperation[];
-  version: number;
-  timestamp: number;
-}
-
-/**
- * V2 事件映射
- */
-export interface V2EventMap {
-  'parser:token': ParserTokenEvent;
-  'snapshot:updated': SnapshotUpdatedEvent;
-  'parser:end': ParserEndEvent;
-  'dom:operations': DOMOperationsEvent;
-}
-
-/**
- * V2 事件类型
- */
-export type V2EventType = keyof V2EventMap;
-
-/**
- * V2 事件数据
- */
-export type V2EventData<T extends V2EventType> = V2EventMap[T];
+export type EventData<T extends EventType> = MarkdownRiverEventMap[T];
