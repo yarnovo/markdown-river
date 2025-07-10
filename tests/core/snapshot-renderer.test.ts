@@ -148,7 +148,7 @@ describe('SnapshotRenderer', () => {
       // 检查嵌套的斜体
       const italicNode = boldNode.children![1];
       expect(italicNode.tagName).toBe('em');
-      expect((italicNode.children![0] as any).textContent).toBe('italic');
+      expect((italicNode.children![0] as { textContent: string }).textContent).toBe('italic');
     });
   });
 
@@ -179,7 +179,7 @@ describe('SnapshotRenderer', () => {
       let lastSnapshot: DOMSnapshot | undefined;
       let lastVersion = 0;
 
-      eventBus.on('snapshot:updated', (event: any) => {
+      eventBus.on('snapshot:updated', (event: unknown) => {
         const { snapshot, version } = event as { snapshot: DOMSnapshot; version: number };
         eventCount++;
         lastSnapshot = snapshot;

@@ -119,7 +119,7 @@ export class DOMDiff {
    * 设置事件监听器
    */
   private setupEventListeners(): void {
-    this.eventBus.on('snapshot:updated', (event: any) => {
+    this.eventBus.on('snapshot:updated', (event: unknown) => {
       const { snapshot, version } = event as {
         snapshot: DOMSnapshot;
         version: number;

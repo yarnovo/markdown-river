@@ -62,7 +62,11 @@ export class SnapshotRenderer {
    */
   private setupEventListeners(): void {
     // 使用类型断言解决事件系统类型问题
-    (this.eventBus as any).on('parser:token', ({ token }: { token: Token }) => {
+    (
+      this.eventBus as unknown as {
+        on: (event: string, handler: (data: { token: Token }) => void) => void;
+      }
+    ).on('parser:token', ({ token }: { token: Token }) => {
       this.handleToken(token);
     });
   }
@@ -102,7 +106,7 @@ export class SnapshotRenderer {
         this.handleBoldStart();
         break;
       case 'BOLD_END':
-        this.handleBoldEnd();
+        this.handleBoldEnd(token);
         break;
       case 'ITALIC_START':
         this.handleItalicStart();
@@ -124,6 +128,15 @@ export class SnapshotRenderer {
         break;
       case 'LINE_BREAK':
         this.handleLineBreak();
+        break;
+      case 'CORRECTION_TO_BOLD_START':
+        this.handleCorrectionToBoldStart();
+        break;
+      case 'CORRECTION_TO_TEXT_SPACE':
+        this.handleCorrectionToTextSpace();
+        break;
+      case 'CORRECTION_TO_LINE_BREAK':
+        this.handleCorrectionToLineBreak();
         break;
       default:
         // 暂时忽略其他令牌类型
@@ -192,12 +205,15 @@ export class SnapshotRenderer {
   /**
    * 处理加粗结束
    */
-  private handleBoldEnd(): void {
-    // 弹出上下文栈
-    const context = this.contextStack.pop();
-    if (!context || context.type !== 'bold') {
-      console.warn('Unexpected BOLD_END token');
+  private handleBoldEnd(token: Token): void {
+    // 只在第二个 * 时才真正结束加粗
+    if (token.index === 2) {
+      const context = this.contextStack.pop();
+      if (!context || context.type !== 'bold') {
+        console.warn('Unexpected BOLD_END token');
+      }
     }
+    // 第一个 * 时不做任何操作，等待第二个 *
   }
 
   /**
@@ -372,6 +388,65 @@ export class SnapshotRenderer {
       };
     }
     return this.contextStack[this.contextStack.length - 1];
+  }
+
+  /**
+   * 处理修正令牌：撤销斜体，改为加粗开始
+   */
+  private handleCorrectionToBoldStart(): void {
+    // 撤销最后一个斜体开始 - 移除最后一个上下文
+    if (this.contextStack.length > 0) {
+      const lastContext = this.contextStack[this.contextStack.length - 1];
+      if (lastContext.type === 'italic') {
+        this.contextStack.pop();
+        // 从父节点中移除最后一个斜体元素
+        const parentContext = this.getCurrentContext();
+        if (parentContext.node.children && parentContext.node.children.length > 0) {
+          parentContext.node.children.pop();
+        }
+      }
+    }
+
+    // 开始加粗
+    this.handleBoldStart();
+  }
+
+  /**
+   * 处理修正令牌：撤销格式，改为空格
+   */
+  private handleCorrectionToTextSpace(): void {
+    // 撤销最后一个格式开始
+    if (this.contextStack.length > 0) {
+      this.contextStack.pop();
+      // 从父节点中移除最后一个格式元素
+      const parentContext = this.getCurrentContext();
+      if (parentContext.node.children && parentContext.node.children.length > 0) {
+        parentContext.node.children.pop();
+      }
+    }
+
+    // 添加*和空格作为普通文本
+    this.handleTextToken({ type: 'TEXT', content: '*' });
+    this.handleTextToken({ type: 'TEXT', content: ' ' });
+  }
+
+  /**
+   * 处理修正令牌：撤销格式，改为换行
+   */
+  private handleCorrectionToLineBreak(): void {
+    // 撤销最后一个格式开始
+    if (this.contextStack.length > 0) {
+      this.contextStack.pop();
+      // 从父节点中移除最后一个格式元素
+      const parentContext = this.getCurrentContext();
+      if (parentContext.node.children && parentContext.node.children.length > 0) {
+        parentContext.node.children.pop();
+      }
+    }
+
+    // 添加*和换行
+    this.handleTextToken({ type: 'TEXT', content: '*' });
+    this.handleLineBreak();
   }
 
   /**

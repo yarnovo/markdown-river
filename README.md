@@ -106,17 +106,6 @@ new StreamingMarkdownRenderer(container: HTMLElement, options?: RendererOptions)
 - 任务列表
 - 嵌套列表
 
-## 架构设计
-
-系统采用模块化设计，包含以下核心模块：
-
-1. **InputBuffer** - 智能缓冲器，处理输入流和歧义决策
-2. **IncrementalParser** - 增量解析器，生成解析事件流
-3. **StreamRenderer** - 流式渲染器，将事件转换为 DOM 操作
-4. **RenderScheduler** - 渲染调度器，优化渲染性能
-5. **EventBus** - 事件总线，模块间通信
-6. **PerformanceMonitor** - 性能监控，自适应优化
-
 ## 性能优化
 
 - 批量 DOM 操作，减少重排

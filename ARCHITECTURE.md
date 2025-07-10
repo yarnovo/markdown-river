@@ -182,8 +182,8 @@ flowchart LR
 **核心特性**：
 
 - **无 POTENTIAL 状态**：看到格式符号立即预测
-- **预期管理**：`EXPECT_BOLD_SECOND` 等待第二个 `*`
-- **违背处理**：预期落空时立即修正（用户会看到格式变化，但避免了符号闪烁）
+- **预期管理**：看到第一个 `*` 时进入 `EXPECT_BOLD_SECOND` 状态，期待下一个字符也是 `*` 来确认加粗格式
+- **违背处理**：如果下一个字符不是 `*`，立即修正为斜体格式（用户会看到格式变化，但避免了符号闪烁）
 
 **状态机图**：
 
@@ -195,9 +195,9 @@ stateDiagram-v2
     EXPECT_BOLD_SECOND --> IN_BOLD: 遇到第二个 *
     EXPECT_BOLD_SECOND --> IN_ITALIC: 遇到其他字符
 
-    IN_BOLD --> EXPECT_BOLD_END_FIRST: 遇到 *
-    EXPECT_BOLD_END_FIRST --> NORMAL: 遇到第二个 *
-    EXPECT_BOLD_END_FIRST --> IN_BOLD: 遇到其他字符
+    IN_BOLD --> ENDING_BOLD: 遇到 *
+    ENDING_BOLD --> NORMAL: 遇到第二个 *
+    ENDING_BOLD --> IN_BOLD: 遇到其他字符
 
     IN_ITALIC --> NORMAL: 遇到 *
     IN_ITALIC --> IN_ITALIC: 遇到其他字符
@@ -211,6 +211,92 @@ stateDiagram-v2
         则修正为斜体
     end note
 ```
+
+#### 设计原则：字符-令牌对应
+
+**核心原则**：每个输入字符都必须产生对应的令牌输出，不能"吞掉"字符。
+
+这个原则确保了：
+
+1. 输入输出的一致性
+2. 用户感知的连续性
+3. 调试的可预测性
+
+#### 预期管理示例
+
+**场景1：用户输入加粗文本 `**bold**`**
+
+```
+输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
+输入: *        状态: EXPECT_BOLD_SECOND → IN_BOLD   输出: CORRECTION_TO_BOLD_START (一对一修正)
+输入: b        状态: IN_BOLD                       输出: TEXT('b')
+输入: o        状态: IN_BOLD                       输出: TEXT('o')
+输入: l        状态: IN_BOLD                       输出: TEXT('l')
+输入: d        状态: IN_BOLD                       输出: TEXT('d')
+输入: *        状态: IN_BOLD → ENDING_BOLD          输出: BOLD_END (index: 1)
+输入: *        状态: ENDING_BOLD → NORMAL           输出: BOLD_END (index: 2)
+```
+
+**场景2：用户输入斜体文本 `*italic*`（后跟空格）**
+
+```
+输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
+输入: i        状态: EXPECT_BOLD_SECOND → IN_ITALIC 输出: TEXT('i') (确认预测)
+输入: t        状态: IN_ITALIC                     输出: TEXT('t')
+输入: a        状态: IN_ITALIC                     输出: TEXT('a')
+输入: l        状态: IN_ITALIC                     输出: TEXT('l')
+输入: i        状态: IN_ITALIC                     输出: TEXT('i')
+输入: c        状态: IN_ITALIC                     输出: TEXT('c')
+输入: *        状态: IN_ITALIC → ENDING_ITALIC     输出: 无 (等待确认)
+输入: (空格)   状态: ENDING_ITALIC → NORMAL        输出: ITALIC_END + TEXT(' ')
+```
+
+**设计原理**：斜体结束需要等待确认字符，这是为了支持嵌套语法，如：
+
+- `*italic with **bold** inside*` - 斜体中嵌套加粗
+- `**bold with *italic* inside**` - 加粗中嵌套斜体
+
+如果第二个 `*` 立即结束斜体，就无法正确解析这些嵌套情况。
+
+**场景3：预期违背 `* hello`**
+
+```
+输入: *        状态: NORMAL → EXPECT_BOLD_SECOND    输出: ITALIC_START (乐观预测)
+输入: (空格)   状态: EXPECT_BOLD_SECOND → NORMAL     输出: CORRECTION_TO_TEXT_SPACE (一对一修正)
+输入: h        状态: NORMAL                        输出: TEXT('h')
+```
+
+**关键洞察**：
+
+- **字符-令牌一对一原则**：每个字符输入产生唯一的令牌输出
+- **乐观预测**：第一个 `*` 立即输出 `ITALIC_START`
+- **修正令牌**：使用复合令牌（如 `CORRECTION_TO_BOLD_START`）实现一对一修正
+- **索引化令牌**：多字符序列（如 `**`）通过索引区分，确保一对一原则
+- **零延迟**：用户立即看到格式效果，不需要等待确认
+- **信息无丢失**：所有语义信息都被保留在令牌中
+- **乐观完成**：在不确定的情况下保持格式，而不是回退到普通文本
+
+#### 修正令牌设计
+
+为了保证字符-令牌一对一原则，设计了以下修正令牌：
+
+- `CORRECTION_TO_BOLD_START`：撤销 `ITALIC_START`，改为 `BOLD_START`
+- `CORRECTION_TO_TEXT_SPACE`：撤销 `ITALIC_START`，改为 `*` + `空格`
+- `CORRECTION_TO_LINE_BREAK`：撤销 `ITALIC_START`，改为 `*` + `换行`
+
+#### 索引化令牌设计
+
+为了处理多字符序列（如 `**`），设计了索引化令牌：
+
+- `{ type: 'BOLD_END', index: 1 }`：第一个结束标记 `*`
+- `{ type: 'BOLD_END', index: 2 }`：第二个结束标记 `*`
+
+渲染器根据索引决定实际处理逻辑：
+
+- `index: 1` 时：准备结束，但不执行操作
+- `index: 2` 时：真正结束加粗格式
+
+每个令牌都包含完整的语义信息，渲染器可以据此做出正确的处理动作。
 
 ### 3.2 快照渲染器（SnapshotRenderer）
 
@@ -358,6 +444,45 @@ type DOMOperation =
 - **用户体验**：立即响应，无延迟感
 - **视觉平滑**：避免格式符号的闪烁问题，用户看到的是格式变化而非符号突然出现消失
 - **性能优化**：减少不必要的渲染
+
+### 5.4 乐观更新的设计哲学
+
+**核心理念：宁可保持格式，不要回退到原始符号**
+
+```mermaid
+flowchart TD
+    A[遇到格式符号] --> B{能确定格式吗?}
+    B -->|是| C[立即应用格式]
+    B -->|否| D[乐观预测格式]
+
+    D --> E{后续输入证实?}
+    E -->|是| F[保持预测格式]
+    E -->|否| G[修正到正确格式]
+
+    C --> H[继续解析]
+    F --> H
+    G --> H
+
+    subgraph "关键决策"
+        I[输入结束时<br/>未完成的格式]
+        I --> J[乐观完成格式<br/>而非回退到符号]
+    end
+```
+
+**设计原则**：
+
+1. **预测优于等待**：看到 `*` 立即预测斜体，而不是等待确认
+2. **修正优于撤销**：发现预测错误时修正格式，而不是撤销重来
+3. **完成优于回退**：输入结束时完成格式，而不是回退到原始符号
+4. **连续性优于准确性**：保持用户体验的连续性比100%的解析准确性更重要
+
+**实际表现**：
+
+- 输入 `*italic` 然后结束 → 显示为斜体格式，而不是 "\*italic"
+- 输入 `**bold` 然后结束 → 显示为加粗格式，而不是 "\*\*bold"
+- 输入 `*italic*` 后跟空格 → 修正为普通文本，但过程中用户感知到的是格式变化
+
+这种设计确保了流式渲染的视觉连续性，避免了格式符号的闪烁，提供了更好的用户体验。
 
 ## 6. 性能考虑
 

@@ -33,6 +33,7 @@ export interface Token {
   content?: string;
   correction?: boolean; // 是否是修正令牌
   position?: number;
+  index?: number; // 在多字符序列中的索引（如第1个*，第2个*）
 }
 
 export type TokenType =
@@ -54,7 +55,11 @@ export type TokenType =
   | 'HEADING'
   | 'LINE_BREAK'
   | 'LIST_ITEM'
-  | 'HORIZONTAL_RULE';
+  | 'HORIZONTAL_RULE'
+  | 'CORRECTION_TO_BOLD_START' // 修正：撤销斜体，改为加粗开始
+  | 'CORRECTION_TO_TEXT_SPACE' // 修正：撤销格式，改为空格
+  | 'CORRECTION_TO_LINE_BREAK' // 修正：撤销格式，改为换行
+  | 'CORRECTION_CANCEL_ITALIC'; // 修正：取消斜体格式
 
 /**
  * 上下文栈项
@@ -140,11 +145,15 @@ export class OptimisticParser {
    */
   private handleNormalState(char: string): void {
     if (char === '*') {
-      // 乐观预测：这可能是强调的开始
-      this.pendingMarkers = char;
-      this.potentialStartPosition = this.position;
+      // 乐观预测：立即输出斜体开始令牌
       this.state = 'EXPECT_BOLD_SECOND';
-      // 暂不输出，等待下一个字符
+      this.contextStack.push({
+        type: 'ITALIC',
+        startPosition: this.position,
+        markerCount: 1,
+      });
+      this.emitToken({ type: 'ITALIC_START' });
+      this.potentialStartPosition = this.position;
     } else if (char === '_') {
       // 直接进入斜体状态
       this.state = 'IN_ITALIC';
@@ -178,32 +187,29 @@ export class OptimisticParser {
    */
   private handleExpectBoldSecondState(char: string): void {
     if (char === '*') {
-      // 确认是加粗！
+      // 修正预测：从斜体改为加粗（一对一原则）
+      this.contextStack.pop(); // 移除斜体上下文
       this.state = 'IN_BOLD';
       this.contextStack.push({
         type: 'BOLD',
         startPosition: this.potentialStartPosition,
         markerCount: 2,
       });
-      this.emitToken({ type: 'BOLD_START' });
-      this.pendingMarkers = '';
-    } else if (char === ' ' || char === '\n' || char === '\t') {
-      // 预期违背：*后面跟空白，不可能是格式
-      this.emitToken({ type: 'TEXT', content: '*' });
-      this.pendingMarkers = '';
+      this.emitToken({ type: 'CORRECTION_TO_BOLD_START' });
+    } else if (char === ' ') {
+      // 预期违背：*后面跟空格，撤销斜体格式（一对一原则）
+      this.contextStack.pop(); // 移除斜体上下文
       this.state = 'NORMAL';
-      this.processChar(char); // 重新处理当前字符
+      this.emitToken({ type: 'CORRECTION_TO_TEXT_SPACE' });
+    } else if (char === '\n') {
+      // 预期违背：*后面跟换行，撤销斜体格式（一对一原则）
+      this.contextStack.pop(); // 移除斜体上下文
+      this.state = 'NORMAL';
+      this.emitToken({ type: 'CORRECTION_TO_LINE_BREAK' });
     } else {
-      // 单个*后跟其他字符，进入斜体状态
+      // 确认是斜体，继续处理
       this.state = 'IN_ITALIC';
-      this.contextStack.push({
-        type: 'ITALIC',
-        startPosition: this.potentialStartPosition,
-        markerCount: 1,
-      });
-      this.emitToken({ type: 'ITALIC_START' });
       this.emitToken({ type: 'TEXT', content: char });
-      this.pendingMarkers = '';
     }
   }
 
@@ -215,6 +221,8 @@ export class OptimisticParser {
       // 可能是结束标记
       this.state = 'ENDING_BOLD';
       this.pendingMarkers = char;
+      // 第一个结束标记 - 发出带索引的令牌
+      this.emitToken({ type: 'BOLD_END', index: 1 });
     } else if (char === '_') {
       // 嵌套的斜体 - 直接进入斜体状态
       this.state = 'IN_ITALIC';
@@ -236,11 +244,11 @@ export class OptimisticParser {
     if (char === '*' && this.contextStack.length > 0) {
       const context = this.contextStack[this.contextStack.length - 1];
       if (context && context.type === 'ITALIC' && context.markerCount === 1) {
-        // 可能是结束斜体的 *
+        // 可能是结束斜体的 *，但需要等待确认字符
         this.state = 'ENDING_ITALIC';
         this.pendingMarkers = char;
       } else {
-        // 在斜体中遇到 *，可能是嵌套的加粗
+        // 在其他上下文中遇到 *，当作普通文本处理
         this.emitToken({ type: 'TEXT', content: char });
       }
     } else if (char === '_' && this.contextStack.length > 0) {
@@ -260,17 +268,12 @@ export class OptimisticParser {
    * 处理即将结束加粗状态
    */
   private handleEndingBoldState(char: string): void {
-    const marker = this.pendingMarkers[0];
-
-    if (char === marker && this.pendingMarkers.length < 2) {
-      this.pendingMarkers += char;
-      if (this.pendingMarkers.length === 2) {
-        // 确认结束加粗
-        this.contextStack.pop();
-        this.emitToken({ type: 'BOLD_END' });
-        this.pendingMarkers = '';
-        this.state = this.contextStack.length > 0 ? this.getStateForContext() : 'NORMAL';
-      }
+    if (char === '*' && this.pendingMarkers.length === 1) {
+      // 第二个结束标记 - 确认结束加粗
+      this.contextStack.pop();
+      this.emitToken({ type: 'BOLD_END', index: 2 });
+      this.pendingMarkers = '';
+      this.state = this.contextStack.length > 0 ? this.getStateForContext() : 'NORMAL';
     } else {
       // 不是结束标记，回到加粗状态
       this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
@@ -284,19 +287,27 @@ export class OptimisticParser {
    * 处理即将结束斜体状态
    */
   private handleEndingItalicState(char: string): void {
-    if (char === ' ' || char === '\n' || char === '\t') {
-      // 预期违背：*后面跟空白，不是斜体结束
-      this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
-      this.pendingMarkers = '';
-      this.state = 'IN_ITALIC';
-      this.processChar(char);
-    } else {
-      // 确认结束斜体
+    if (
+      char === ' ' ||
+      char === '\n' ||
+      char === '\t' ||
+      char === '.' ||
+      char === ',' ||
+      char === '!' ||
+      char === '?'
+    ) {
+      // 确认结束斜体 - 空白字符或标点符号确认斜体结束
       this.contextStack.pop();
       this.emitToken({ type: 'ITALIC_END' });
       this.pendingMarkers = '';
       this.state = this.contextStack.length > 0 ? this.getStateForContext() : 'NORMAL';
       // 处理当前字符
+      this.processChar(char);
+    } else {
+      // 不是结束标记，回到斜体状态
+      this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
+      this.pendingMarkers = '';
+      this.state = 'IN_ITALIC';
       this.processChar(char);
     }
   }
@@ -377,16 +388,16 @@ export class OptimisticParser {
   }
 
   /**
-   * 结束解析
+   * 结束解析 - 乐观完成所有未完成的格式
    */
   end(): void {
-    // 处理未完成的状态
+    // 处理未完成的状态 - 将待定的标记当作普通文本输出
     if (this.pendingMarkers) {
       this.emitToken({ type: 'TEXT', content: this.pendingMarkers });
       this.pendingMarkers = '';
     }
 
-    // 关闭所有未关闭的上下文
+    // 乐观完成所有未关闭的上下文 - 在不确定的情况下保持格式
     while (this.contextStack.length > 0) {
       const context = this.contextStack.pop()!;
       if (context.type === 'BOLD') {

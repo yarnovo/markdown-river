@@ -80,7 +80,7 @@ export class StreamingRendererV2 {
    */
   private setupEventListeners(): void {
     // 监听 DOM 操作事件
-    this.eventBus.on('dom:operations', (event: any) => {
+    this.eventBus.on('dom:operations', (event: unknown) => {
       const opsEvent = event as { operations: DOMOperation[]; version: number; timestamp: number };
       this.applyOperations(opsEvent.operations);
     });
