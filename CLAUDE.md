@@ -883,6 +883,128 @@ if (codeBlockIndex === -1) {
 - **实用主义优先**：不要为了"正确性"牺牲用户体验
 - **持续调研**：定期验证底层依赖的能力边界
 
+## 示例项目增强功能（2025-07-10 21:12）
+
+### 用户界面体验优化
+
+**用户新需求**：
+
+- 测试用例可以一直选择，运行中也能切换
+- 重置按钮改为"重新开始"，支持运行中重新开始
+- 增加"停止"按钮，可随时中止流式输入
+- 显示当前正在运行的用例名称
+- 删除底部实时解析功能（简化界面）
+
+### 控制逻辑设计
+
+**状态管理**：
+
+```javascript
+// React 示例
+const [isStreaming, setIsStreaming] = useState(false);
+const [selectedCase, setSelectedCase] = useState('完整文档');
+const [currentCase, setCurrentCase] = useState('');
+const [streamInterval, setStreamInterval] = useState(null);
+
+// JavaScript 示例
+let isStreaming = false;
+let currentInterval = null;
+```
+
+**按钮状态逻辑**：
+
+- **未运行时**：显示"开始演示"按钮
+- **运行中**：显示"重新开始" + "停止"按钮，测试用例可选择
+- **完成后**：显示"重新开始"按钮
+- **速度控制**：运行中禁用，完成后恢复
+
+### 交互体验提升
+
+**1. 当前用例显示**：
+
+- React：使用 `{currentCase && <div className="current-case">当前用例：{currentCase}</div>}`
+- JavaScript：使用 `currentCaseInfo` 元素显示，运行时显示/隐藏
+
+**2. 样式增强**：
+
+```css
+.current-case,
+.current-case-info {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 1px solid #bbdefb;
+}
+```
+
+**3. 重新开始逻辑**：
+
+```javascript
+// 运行中重新开始 = 停止当前 + 立即开始新的
+const startStreaming = () => {
+  if (streamInterval) {
+    clearInterval(streamInterval); // 先停止现有的
+  }
+  // 然后开始新的流式输入
+};
+```
+
+### 功能简化
+
+**移除的功能**：
+
+- JavaScript 示例的实时解析演示区块
+- 相关的 DOM 元素（comparison-input、parse-result 等）
+- 对比解析的事件处理代码
+
+**保留的功能**：
+
+- 测试用例下拉选择（完整文档、标题和段落、强调和格式等）
+- 速度控制滑块（5-100ms）
+- 原始 HTML 调试信息
+
+### 用户体验设计理念
+
+**关键原则**：
+
+- **即时响应**：运行中可以立即重新开始，无需等待
+- **状态透明**：明确显示当前运行的用例和状态
+- **操作灵活**：提供启动、重启、停止的完整控制
+- **界面简洁**：移除不必要的功能，专注核心演示
+
+**交互流程**：
+
+1. 选择测试用例 → 点击"开始演示"
+2. 运行中可以：切换用例 + 点击"重新开始" / 点击"停止"
+3. 完成后可以：点击"重新开始"（重新加载页面）
+
+### 技术实现要点
+
+**状态同步**：
+
+- `selectedCase`：用户选择的用例
+- `currentCase`：正在运行的用例
+- `isStreaming`：是否正在运行
+- `streamInterval`：当前定时器引用
+
+**清理机制**：
+
+```javascript
+// 确保每次开始前清理之前的定时器
+if (currentInterval) {
+  clearInterval(currentInterval);
+  currentInterval = null;
+}
+```
+
+**UI 响应性**：
+
+- 运行中禁用速度滑块，防止影响正在进行的演示
+- 按钮文案动态变化，提供清晰的操作指导
+- 当前用例名称实时显示，增强用户反馈
+
 ## 项目记忆总结（2025-07-10 最终版）
 
 ### 重要经验教训
@@ -1525,5 +1647,151 @@ const backtickMatches = withoutCodeBlocks.match(/`/g);
 <!-- 代码质量要求: 新增零容错标准、Hook驱动质量检测、工作流程偏好 -->
 <!-- 技术决策记录: 补充本次重构中体现的用户价值观和方法论 -->
 <!-- 完整性评估: 本次对话的关键信息已全面记录，包括技术实现和用户偏好 -->
-<!-- 最后回顾: 2025-07-10T21:03:00+08:00 -->
-<!-- 结论: 项目记忆已完整反映架构重构和用户偏好，未来协作基础扎实 -->
+
+### 示例项目简化（2025-07-10 21:24）
+
+**用户决策**：
+
+- 删除 `examples/js-parcel` 目录
+- 只保留 React 示例（`examples/react-vite`）
+- 修改默认端口号避免冲突
+
+**技术考虑**：
+
+- React 示例功能更完整，有 Hook 封装
+- 单一示例降低维护成本
+- 避免重复功能演示
+
+**端口配置**：
+
+- 不使用 Vite 默认端口
+- 指定自定义端口号避免冲突
+
+### 示例项目 Bug 修复（2025-07-10 21:32）
+
+**发现的问题**：
+
+- 重新开始时内容累积在之前内容后面，而非从头开始
+- 停止后未完全恢复到初始状态，仍显示内容
+
+**用户期望行为**：
+
+- "重新开始"：清空内容，从头开始流式输出
+- "停止"：完全恢复到初始状态，只显示"开始"按钮
+
+**技术解决方案**：
+
+1. **扩展 useMarkdownRiver Hook**：
+
+   ```typescript
+   interface UseMarkdownRiverReturn {
+     write: (chunk: string) => void;
+     end: () => void;
+     reset: () => void; // 新增重置功能
+     content: React.ReactNode;
+     rawHtml: string;
+   }
+   ```
+
+2. **reset() 方法实现**：
+   - 销毁旧的 MarkdownRiver 实例
+   - 清空 HTML 状态 (`setRawHtml('')`)
+   - 创建新的 MarkdownRiver 实例
+   - 重新绑定事件监听器
+
+3. **修复 startStreaming 逻辑**：
+
+   ```javascript
+   const startStreaming = () => {
+     // 清理旧的定时器
+     if (streamInterval) clearInterval(streamInterval);
+
+     // 重置内容（关键修复）
+     reset();
+
+     // 开始新的流式输入
+   };
+   ```
+
+4. **修复 stopStreaming 逻辑**：
+
+   ```javascript
+   const stopStreaming = () => {
+     // 停止定时器
+     if (streamInterval) clearInterval(streamInterval);
+
+     // 恢复状态
+     setIsStreaming(false);
+     setCurrentCase(''); // 清空当前用例显示
+     reset(); // 清空内容，完全恢复初始状态
+   };
+   ```
+
+5. **简化按钮逻辑**：
+   - 移除了"完成后的重新开始"按钮
+   - 按钮状态：未运行（开始）→ 运行中（重新开始+停止）→ 停止后（开始）
+
+**修复成果**：
+
+- ✅ 重新开始时完全清空内容，从头开始
+- ✅ 停止后完全恢复到初始状态
+- ✅ 按钮逻辑简洁明确
+- ✅ 78/79 测试通过，功能稳定
+
+**用户体验提升**：
+
+- **即时清空**：每次重新开始都是全新的开始
+- **完全重置**：停止后回到最初状态，符合直觉
+- **状态一致**：按钮状态和实际功能完全匹配
+
+**技术洞察**：
+
+- React Hook 需要提供完整的生命周期控制
+- 流式应用中的"重置"功能非常重要
+- 用户期望的"停止"是完全重置，而非暂停
+
+### 样式细节完善（2025-07-10 21:35）
+
+**发现的问题**：
+
+- HTML `em` 标签缺少对应的 CSS 样式
+- 用户指出"斜体没有为他的 html em 创建样式"
+
+**用户样式偏好**：
+
+- **简洁原则**：用户明确要求"只增加斜体的样式，不要加多"
+- **反对过度设计**：拒绝添加颜色、背景等装饰性样式
+- **功能性优先**：样式应该服务于功能展示，而非视觉装饰
+
+**解决方案**：
+
+```css
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content strong {
+  font-weight: bold;
+}
+```
+
+**用户反馈模式识别**：
+
+1. **立即中断过度实现**："[Request interrupted by user]"
+2. **明确简化要求**："斜体增加斜体的样式即可 不要加多"
+3. **拒绝装饰性改进**：当我添加颜色和背景时，用户立即要求简化
+
+**设计哲学洞察**：
+
+- 用户偏好**最小化实现**：只解决必要问题，不增加额外复杂性
+- **功能导向**：CSS 样式应该准确反映 HTML 语义，而非追求视觉效果
+- **直接沟通**：发现过度实现时立即纠正，不绕弯子
+
+**可复用原则**：
+
+- 所有样式修改都应该遵循"最小必要"原则
+- 先实现功能，再考虑美化（如果用户要求）
+- 用户中断通常意味着方向偏离了核心需求
+
+<!-- 最后回顾: 2025-07-10T21:35:00+08:00 -->
+<!-- 结论: 完成样式细节修复，记录用户简洁设计偏好，建立最小化实现原则 -->

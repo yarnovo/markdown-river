@@ -6,6 +6,7 @@ import { MarkdownRiverOptions } from '../types';
 interface UseMarkdownRiverReturn {
   write: (chunk: string) => void;
   end: () => void;
+  reset: () => void;
   content: React.ReactNode;
   rawHtml: string;
 }
@@ -69,6 +70,23 @@ export function useMarkdownRiver(options: MarkdownRiverOptions = {}): UseMarkdow
     riverRef.current?.end();
   };
 
+  const reset = (): void => {
+    // 销毁旧实例
+    if (riverRef.current) {
+      riverRef.current.destroy();
+    }
+
+    // 清空状态
+    setRawHtml('');
+
+    // 创建新实例
+    const river = new MarkdownRiver(options);
+    river.on('content:parsed', ({ html }) => {
+      setRawHtml(html);
+    });
+    riverRef.current = river;
+  };
+
   // 使用 html-react-parser 解析 HTML 为 React 元素
   const content = useMemo(() => {
     return rawHtml ? parse(rawHtml, parserOptions) : null;
@@ -77,6 +95,7 @@ export function useMarkdownRiver(options: MarkdownRiverOptions = {}): UseMarkdow
   return {
     write,
     end,
+    reset,
     content,
     rawHtml,
   };

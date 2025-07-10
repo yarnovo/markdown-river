@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMarkdownRiver } from 'markdown-river';
 import { testCases } from '@markdown-river/test-suite';
 import './App.css';
@@ -7,7 +7,9 @@ function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [speed, setSpeed] = useState(15); // 默认 15ms
   const [selectedCase, setSelectedCase] = useState('完整文档');
-  const { write, end, content, rawHtml } = useMarkdownRiver({
+  const [currentCase, setCurrentCase] = useState('');
+  const [streamInterval, setStreamInterval] = useState(null);
+  const { write, end, reset, content, rawHtml } = useMarkdownRiver({
     markedOptions: {
       breaks: true,
       gfm: true,
@@ -16,7 +18,16 @@ function App() {
 
   // 模拟流式输入
   const startStreaming = () => {
+    // 如果正在运行，先停止
+    if (streamInterval) {
+      clearInterval(streamInterval);
+    }
+
+    // 重置内容（重新开始时清空之前的内容）
+    reset();
+
     setIsStreaming(true);
+    setCurrentCase(selectedCase);
     const text = testCases[selectedCase];
     let index = 0;
 
@@ -28,13 +39,22 @@ function App() {
         clearInterval(interval);
         end();
         setIsStreaming(false);
+        setStreamInterval(null);
       }
     }, speed); // 使用可调节的速度
+
+    setStreamInterval(interval);
   };
 
-  // 重置
-  const reset = () => {
-    window.location.reload();
+  // 停止流式输入 - 恢复到初始状态
+  const stopStreaming = () => {
+    if (streamInterval) {
+      clearInterval(streamInterval);
+      setStreamInterval(null);
+    }
+    setIsStreaming(false);
+    setCurrentCase(''); // 清空当前用例显示
+    reset(); // 清空内容，恢复到初始状态
   };
 
   return (
@@ -44,11 +64,7 @@ function App() {
         <div className="controls">
           <label>
             测试用例：
-            <select
-              value={selectedCase}
-              onChange={e => setSelectedCase(e.target.value)}
-              disabled={isStreaming || content}
-            >
+            <select value={selectedCase} onChange={e => setSelectedCase(e.target.value)}>
               {Object.keys(testCases).map(caseName => (
                 <option key={caseName} value={caseName}>
                   {caseName}
@@ -56,6 +72,7 @@ function App() {
               ))}
             </select>
           </label>
+          {currentCase && <div className="current-case">当前用例：{currentCase}</div>}
           <label>
             速度：
             <input
@@ -64,14 +81,12 @@ function App() {
               max="100"
               value={speed}
               onChange={e => setSpeed(Number(e.target.value))}
-              disabled={isStreaming || content}
+              disabled={isStreaming}
             />
             <span>{speed}ms</span>
           </label>
-          <button onClick={startStreaming} disabled={isStreaming || content}>
-            {isStreaming ? '正在输入...' : '开始演示'}
-          </button>
-          {content && !isStreaming && <button onClick={reset}>重置</button>}
+          <button onClick={startStreaming}>{isStreaming ? '重新开始' : '开始演示'}</button>
+          {isStreaming && <button onClick={stopStreaming}>停止</button>}
         </div>
       </header>
 

@@ -71,6 +71,15 @@
   cursor: not-allowed;
 }
 
+.current-case {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 1px solid #bbdefb;
+}
+
 .app-main {
   background: white;
   border-radius: 8px;
