@@ -158,7 +158,7 @@ describe('Streaming Integration Tests', () => {
     });
   });
 
-  describe('歧义检测测试', () => {
+  describe('策略决策测试', () => {
     it('未闭合的行内代码', () => {
       const river = new MarkdownRiver();
       const handler = vi.fn();
@@ -203,7 +203,7 @@ describe('Streaming Integration Tests', () => {
       expect(handler).toHaveBeenCalledTimes(2);
     });
 
-    it('代码块标记的歧义检测', () => {
+    it('代码块标记的策略决策', () => {
       const river = new MarkdownRiver();
       const handler = vi.fn();
       river.on('content:parsed', handler);

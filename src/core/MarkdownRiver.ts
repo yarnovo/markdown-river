@@ -114,7 +114,7 @@ export class MarkdownRiver {
       this.eventEmitter.emit('buffer:status', {
         state: 'buffering',
         size: fullContent.length - toIndex,
-        reason: 'Ambiguity detected',
+        reason: 'Strategy decided to wait',
       });
     }
   }

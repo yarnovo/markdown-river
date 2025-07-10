@@ -63,7 +63,7 @@
 ```
 
 - **结论**：三个符号即可形成分隔线
-- **优势**：立即渲染，无歧义
+- **优势**：立即渲染，策略可直接决定
 - **策略**：无需特殊处理
 
 ### 2. 需要策略处理的闪烁场景
@@ -163,11 +163,11 @@
 
 ## 策略实现建议
 
-### 1. 需要检测歧义的模式
+### 1. 需要策略决策的模式
 
 ```typescript
-// StandardStrategy 应该检测的模式
-const ambiguityPatterns = {
+// StandardStrategy 应该决策的模式
+const decisionPatterns = {
   // 行内强调
   singleAsterisk: /\*(?!\*)/, // 单个 * 后面不是 *
   doubleAsterisk: /\*\*(?!\*)/, // 两个 * 后面不是 *
@@ -195,31 +195,35 @@ const smartHandledPatterns = {
 };
 ````
 
-### 3. 优化后的歧义检测逻辑
+### 3. 优化后的策略决策逻辑
 
 ````typescript
-hasAmbiguity(content: string, lastParsedIndex: number): boolean {
+process(content: string, lastParsedIndex: number): number | string {
   const unparsed = content.slice(lastParsedIndex);
 
   // 1. 检查行内代码（排除代码块）
   const withoutCodeBlocks = unparsed.replace(/```/g, '');
   if ((withoutCodeBlocks.match(/`/g) || []).length % 2 !== 0) {
-    return true;
+    // 策略决定：如果后面有内容则补全，否则等待
+    return lastParsedIndex; // 决定保持当前位置或返回补全内容
   }
 
   // 2. 检查强调标记
   // 先处理双星号，避免与单星号混淆
   const afterDoubleAsterisk = unparsed.replace(/\*\*/g, '');
   if ((afterDoubleAsterisk.match(/\*/g) || []).length % 2 !== 0) {
-    return true;
+    // 策略决定：返回补全内容或位置
+    return content.length; // 或者返回补全后的字符串
   }
 
   // 3. 检查链接（简化版）
   if (unparsed.includes('[') && !unparsed.includes('](')) {
-    return true;
+    // 策略决定：等待完整链接或补全
+    return lastParsedIndex;
   }
 
-  return false;
+  // 没有需要特殊处理的情况，策略决定解析到末尾
+  return content.length;
 }
 ````
 
