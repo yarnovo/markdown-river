@@ -25,17 +25,27 @@ export class MarkdownTransformer {
     }
 
     // 处理星号格式
-    // 特殊情况：过滤单独的 * 或 **
-    if (result === '*' || result === '**') {
+    // 特殊情况：过滤单独的格式符号
+    if (result === '*' || result === '**' || result === '***') {
       return '';
+    }
+
+    // 处理三个星号的特殊情况 ***text***
+    if (result.startsWith('***') && !result.includes('***', 3)) {
+      // 以 *** 开头但没有闭合的情况
+      const afterOpening = result.substring(3);
+      if (afterOpening.length > 0) {
+        // 有内容，补全为 ***text***
+        return result + '***';
+      }
     }
 
     // 处理加粗格式 **text**
     const doubleStarMatches = result.match(/\*\*/g) || [];
     if (doubleStarMatches.length % 2 !== 0) {
       // 奇数个 **，需要处理
-      if (result.startsWith('**')) {
-        // 以 ** 开头的情况
+      if (result.startsWith('**') && !result.startsWith('***')) {
+        // 以 ** 开头的情况（但不是 ***）
         const afterOpening = result.substring(2);
         if (afterOpening.includes('**')) {
           // 已经闭合，不需要处理
@@ -64,25 +74,37 @@ export class MarkdownTransformer {
     }
 
     // 处理斜体格式 *text*
-    // 先排除 ** 的干扰
-    const tempForStar = result.replace(/\*\*/g, '@@');
+    // 先排除 *** 和 ** 的干扰
+    const tempForStar = result.replace(/\*\*\*/g, '###').replace(/\*\*/g, '@@');
     const singleStarCount = (tempForStar.match(/\*/g) || []).length;
 
     if (singleStarCount % 2 !== 0) {
       // 奇数个单星号，需要处理
+      // 但不处理以 *** 开头的情况（已经在前面处理）
+      if (result.startsWith('***')) {
+        return result;
+      }
+
       // 找到最后一个未配对的 *
       let lastUnpairedIndex = -1;
       let pairCount = 0;
 
       for (let i = 0; i < result.length; i++) {
         if (result[i] === '*') {
-          // 检查是否是 **
+          // 检查是否是 *** 或 **
+          if (i + 2 < result.length && result[i + 1] === '*' && result[i + 2] === '*') {
+            i += 2; // 跳过 ***
+            continue;
+          }
           if (i + 1 < result.length && result[i + 1] === '*') {
             i++; // 跳过 **
             continue;
           }
           if (i > 0 && result[i - 1] === '*') {
             continue; // 这是 ** 的第二个 *
+          }
+          if (i > 1 && result[i - 1] === '*' && result[i - 2] === '*') {
+            continue; // 这是 *** 的第三个 *
           }
 
           // 这是单个 *
@@ -106,13 +128,33 @@ export class MarkdownTransformer {
       }
     }
 
+    // 处理末尾多余的星号
+    // 检查是否有完整的格式后跟多余的星号
+    if (result.length > 2) {
+      // 匹配 **text** 后跟额外的 *
+      const boldWithExtraStar = result.match(/^(.*)(\*\*[^*]+\*\*)(\*+)$/);
+      if (boldWithExtraStar) {
+        // 过滤掉多余的星号
+        return boldWithExtraStar[1] + boldWithExtraStar[2];
+      }
+
+      // 匹配 *text* 后跟额外的 *
+      const italicWithExtraStar = result.match(/^(.*)(\*[^*]+\*)(\*+)$/);
+      if (italicWithExtraStar) {
+        // 过滤掉多余的星号
+        return italicWithExtraStar[1] + italicWithExtraStar[2];
+      }
+    }
+
     // 处理末尾单独的 * 或 **
     if (result.endsWith('*') && !result.endsWith('**') && result.length > 1) {
       // 检查这个 * 前面是否有配对的
       const beforeStar = result.slice(0, -1);
-      const starCount = (beforeStar.match(/\*/g) || []).length;
-      if (starCount % 2 === 0) {
-        // 前面的星号都配对了，这个是多余的，过滤掉
+      // 计算除了 ** 之外的单个 *
+      const tempForCount = beforeStar.replace(/\*\*/g, '@@');
+      const singleStarCount = (tempForCount.match(/\*/g) || []).length;
+      if (singleStarCount % 2 === 0) {
+        // 前面的单个星号都配对了，这个是多余的，过滤掉
         return beforeStar;
       }
     }
@@ -121,8 +163,11 @@ export class MarkdownTransformer {
       // 检查这个 ** 前面是否有配对的
       const beforeStars = result.slice(0, -2);
       const doubleStarCount = (beforeStars.match(/\*\*/g) || []).length;
-      if (doubleStarCount % 2 === 0) {
-        // 前面的 ** 都配对了，这个是多余的，过滤掉
+
+      // 只有在前面有奇数个 **，且这个 ** 不能形成完整的加粗格式时才过滤
+      // **text** 这种完整格式不应该被过滤
+      if (doubleStarCount % 2 === 0 && !beforeStars.includes('**')) {
+        // 前面没有 **，末尾的 ** 是多余的，过滤掉
         return beforeStars;
       }
     }

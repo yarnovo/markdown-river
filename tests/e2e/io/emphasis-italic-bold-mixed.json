@@ -1,0 +1,107 @@
+{
+  "name": "斜体加粗混合格式",
+  "description": "测试斜体加粗混合格式：***斜体加粗*** 或 ___斜体加粗___",
+  "input": {
+    "chunks": [
+      "*",
+      "*",
+      "*",
+      "斜",
+      "体",
+      "加",
+      "粗",
+      "*",
+      "*",
+      "*",
+      " ",
+      "或",
+      " ",
+      "_",
+      "_",
+      "_",
+      "斜",
+      "体",
+      "加",
+      "粗",
+      "_",
+      "_",
+      "_"
+    ],
+    "timing": "sequential"
+  },
+  "expected": {
+    "steps": [
+      {
+        "after_chunk": 0,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 * 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 1,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 ** 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 2,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 *** 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 3,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜</em></strong></p>\n",
+        "reason": "检测到未闭合的 *** 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 6,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加</em></strong></p>\n",
+        "reason": "继续补全斜体加粗格式"
+      },
+      {
+        "after_chunk": 7,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加粗</em></strong></p>\n",
+        "reason": "继续补全斜体加粗格式"
+      },
+      {
+        "after_chunk": 9,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加粗</em></strong></p>\n",
+        "reason": "完整的 ***斜体加粗*** 格式"
+      },
+      {
+        "after_chunk": 12,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加粗</em></strong> 或 </p>\n",
+        "reason": "解析到 ' 或 ' 的正常内容"
+      },
+      {
+        "after_chunk": 15,
+        "strategy_decision": "wait",
+        "display_html": "<p><strong><em>斜体加粗</em></strong> 或 </p>\n",
+        "reason": "单独的 ___ 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 16,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加粗</em></strong> 或 <strong><em>斜</em></strong></p>\n",
+        "reason": "检测到未闭合的 ___ 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 22,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong><em>斜体加粗</em></strong> 或 <strong><em>斜体加粗</em></strong></p>\n",
+        "reason": "完整的下划线斜体加粗格式"
+      }
+    ],
+    "final_state": {
+      "total_chunks_processed": 23,
+      "final_display": "<p><strong><em>斜体加粗</em></strong> 或 <strong><em>斜体加粗</em></strong></p>\n",
+      "strategy_calls": 23
+    }
+  }
+}

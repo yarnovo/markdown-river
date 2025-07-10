@@ -1,0 +1,91 @@
+{
+  "name": "反向嵌套强调格式",
+  "description": "测试反向嵌套格式：*斜体文本中包含 __加粗__ 文本*",
+  "input": {
+    "chunks": [
+      "*",
+      "斜",
+      "体",
+      "文",
+      "本",
+      "中",
+      "包",
+      "含",
+      " ",
+      "_",
+      "_",
+      "加",
+      "粗",
+      "_",
+      "_",
+      " ",
+      "文",
+      "本",
+      "*"
+    ],
+    "timing": "sequential"
+  },
+  "expected": {
+    "steps": [
+      {
+        "after_chunk": 0,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 * 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 1,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜</em></p>\n",
+        "reason": "检测到未闭合的 * 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 8,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜体文本中包含 </em></p>\n",
+        "reason": "继续补全斜体格式"
+      },
+      {
+        "after_chunk": 9,
+        "strategy_decision": "wait",
+        "display_html": "<p><em>斜体文本中包含 </em></p>\n",
+        "reason": "单独的 _ 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 10,
+        "strategy_decision": "wait",
+        "display_html": "<p><em>斜体文本中包含 </em></p>\n",
+        "reason": "单独的 __ 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 11,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜体文本中包含 <strong>加</strong></em></p>\n",
+        "reason": "检测到未闭合的 __ 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 14,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜体文本中包含 <strong>加粗</strong></em></p>\n",
+        "reason": "完整的嵌套加粗格式"
+      },
+      {
+        "after_chunk": 17,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜体文本中包含 <strong>加粗</strong> 文本</em></p>\n",
+        "reason": "继续在斜体格式中添加内容"
+      },
+      {
+        "after_chunk": 18,
+        "strategy_decision": "complete",
+        "display_html": "<p><em>斜体文本中包含 <strong>加粗</strong> 文本</em></p>\n",
+        "reason": "完整的反向嵌套格式：斜体中包含加粗"
+      }
+    ],
+    "final_state": {
+      "total_chunks_processed": 19,
+      "final_display": "<p><em>斜体文本中包含 <strong>加粗</strong> 文本</em></p>\n",
+      "strategy_calls": 19
+    }
+  }
+}

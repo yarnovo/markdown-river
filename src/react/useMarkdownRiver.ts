@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import parse, { domToReact, HTMLReactParserOptions } from 'html-react-parser';
-import { MarkdownRiver } from '../core/MarkdownRiver';
+import { MarkdownRiver } from '../core/MarkdownRiver.js';
 import { MarkdownRiverOptions } from '../types';
 
 interface UseMarkdownRiverReturn {

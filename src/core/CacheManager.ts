@@ -1,4 +1,4 @@
-import { EventEmitter } from '../events/EventEmitter';
+import { EventEmitter } from '../events/EventEmitter.js';
 
 export class CacheManager {
   private content: string = '';

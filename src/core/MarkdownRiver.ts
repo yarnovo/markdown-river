@@ -1,7 +1,7 @@
-import { CacheManager } from './CacheManager';
-import { MarkdownParser } from './MarkdownParser';
-import { MarkdownTransformer } from './MarkdownTransformer';
-import { EventEmitter } from '../events/EventEmitter';
+import { CacheManager } from './CacheManager.js';
+import { MarkdownParser } from './MarkdownParser.js';
+import { MarkdownTransformer } from './MarkdownTransformer.js';
+import { EventEmitter } from '../events/EventEmitter.js';
 import { MarkdownRiverOptions } from '../types';
 import { EventMap } from '../events/types';
 

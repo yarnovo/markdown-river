@@ -32,6 +32,8 @@ interface E2ETestCase {
   description: string;
   input: E2ETestInput;
   expected: E2ETestExpected;
+  // 添加文件路径信息用于错误报告
+  _filePath?: string;
 }
 
 // 加载所有 IO 测试数据
@@ -41,7 +43,9 @@ function loadE2ETestCases(): E2ETestCase[] {
 
   return files.map(file => {
     const content = readFileSync(join(ioDir, file), 'utf-8');
-    return JSON.parse(content) as E2ETestCase;
+    const testCase = JSON.parse(content) as E2ETestCase;
+    testCase._filePath = file; // 添加文件路径信息
+    return testCase;
   });
 }
 
@@ -90,15 +94,43 @@ async function executeE2ETest(testCase: E2ETestCase): Promise<{
 
       if (expectedStep.strategy_decision === 'wait') {
         // 如果策略决定等待，应该没有新的解析结果或者结果为空
-        if (latestResult) {
-          expect(latestResult.html).toBe(expectedStep.display_html);
-        } else {
-          expect(expectedStep.display_html).toBe('');
+        try {
+          if (latestResult) {
+            expect(latestResult.html).toBe(expectedStep.display_html);
+          } else {
+            expect(expectedStep.display_html).toBe('');
+          }
+        } catch (error) {
+          console.error(`❌ E2E测试失败 - ${testCase.name}`);
+          console.error(`📁 JSON文件: ${testCase._filePath || '未知'}`);
+          console.error(`📍 失败步骤: after_chunk=${i} (输入第${i + 1}个字符: "${chunk}")`);
+          console.error(`🎯 期望策略: ${expectedStep.strategy_decision}`);
+          console.error(`💭 期望原因: ${expectedStep.reason}`);
+          console.error(`📄 期望HTML: ${JSON.stringify(expectedStep.display_html)}`);
+          console.error(
+            `📄 实际HTML: ${latestResult ? JSON.stringify(latestResult.html) : 'undefined'}`
+          );
+          console.error(`🔄 累积输入: "${testCase.input.chunks.slice(0, i + 1).join('')}"`);
+          throw error;
         }
       } else if (expectedStep.strategy_decision === 'complete') {
         // 如果策略决定补全，应该有新的解析结果
-        expect(latestResult).toBeDefined();
-        expect(latestResult.html).toBe(expectedStep.display_html);
+        try {
+          expect(latestResult).toBeDefined();
+          expect(latestResult.html).toBe(expectedStep.display_html);
+        } catch (error) {
+          console.error(`❌ E2E测试失败 - ${testCase.name}`);
+          console.error(`📁 JSON文件: ${testCase._filePath || '未知'}`);
+          console.error(`📍 失败步骤: after_chunk=${i} (输入第${i + 1}个字符: "${chunk}")`);
+          console.error(`🎯 期望策略: ${expectedStep.strategy_decision}`);
+          console.error(`💭 期望原因: ${expectedStep.reason}`);
+          console.error(`📄 期望HTML: ${JSON.stringify(expectedStep.display_html)}`);
+          console.error(
+            `📄 实际HTML: ${latestResult ? JSON.stringify(latestResult.html) : 'undefined'}`
+          );
+          console.error(`🔄 累积输入: "${testCase.input.chunks.slice(0, i + 1).join('')}"`);
+          throw error;
+        }
       }
     }
   }
@@ -122,13 +154,25 @@ describe('端到端测试 (E2E)', () => {
         const result = await executeE2ETest(testCase);
 
         // 验证最终状态
-        expect(result.finalHtml).toBe(testCase.expected.final_state.final_display);
-        expect(result.strategyCalls).toBe(testCase.expected.final_state.strategy_calls);
-
-        // 验证处理的块数量
-        expect(testCase.input.chunks.length).toBe(
-          testCase.expected.final_state.total_chunks_processed
-        );
+        try {
+          expect(result.finalHtml).toBe(testCase.expected.final_state.final_display);
+          expect(result.strategyCalls).toBe(testCase.expected.final_state.strategy_calls);
+          expect(testCase.input.chunks.length).toBe(
+            testCase.expected.final_state.total_chunks_processed
+          );
+        } catch (error) {
+          console.error(`❌ E2E最终状态验证失败 - ${testCase.name}`);
+          console.error(`📁 JSON文件: ${testCase._filePath || '未知'}`);
+          console.error(
+            `📄 期望最终HTML: ${JSON.stringify(testCase.expected.final_state.final_display)}`
+          );
+          console.error(`📄 实际最终HTML: ${JSON.stringify(result.finalHtml)}`);
+          console.error(`🔢 期望策略调用次数: ${testCase.expected.final_state.strategy_calls}`);
+          console.error(`🔢 实际策略调用次数: ${result.strategyCalls}`);
+          console.error(`🔢 期望处理块数: ${testCase.expected.final_state.total_chunks_processed}`);
+          console.error(`🔢 实际输入块数: ${testCase.input.chunks.length}`);
+          throw error;
+        }
       });
 
       it(`${testCase.description} - 详细步骤验证`, async () => {
@@ -155,7 +199,18 @@ describe('端到端测试 (E2E)', () => {
             console.log(`Reason: ${expectedStep.reason}`);
             console.log('---');
 
-            expect(currentHtml).toBe(expectedStep.display_html);
+            try {
+              expect(currentHtml).toBe(expectedStep.display_html);
+            } catch (error) {
+              console.error(`❌ E2E详细步骤验证失败 - ${testCase.name}`);
+              console.error(`📁 JSON文件: ${testCase._filePath || '未知'}`);
+              console.error(`📍 失败步骤: after_chunk=${i} (输入第${i + 1}个字符: "${chunk}")`);
+              console.error(`💭 期望原因: ${expectedStep.reason}`);
+              console.error(`📄 期望HTML: ${JSON.stringify(expectedStep.display_html)}`);
+              console.error(`📄 实际HTML: ${JSON.stringify(currentHtml)}`);
+              console.error(`🔄 累积输入: "${testCase.input.chunks.slice(0, i + 1).join('')}"`);
+              throw error;
+            }
           }
         }
 

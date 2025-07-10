@@ -1,8 +1,8 @@
 // 核心类
-export { MarkdownRiver } from './core/MarkdownRiver';
+export { MarkdownRiver } from './core/MarkdownRiver.js';
 
 // React Hook
-export { useMarkdownRiver } from './react/useMarkdownRiver';
+export { useMarkdownRiver } from './react/useMarkdownRiver.js';
 
 // 类型
 export type { StreamState, MarkdownRiverOptions, ParsedContent, BufferStatus } from './types';

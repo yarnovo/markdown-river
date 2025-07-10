@@ -1,0 +1,103 @@
+{
+  "name": "加粗格式 - 基础测试",
+  "description": "测试基础加粗格式：**加粗文本** 或 __加粗文本__",
+  "input": {
+    "chunks": [
+      "*",
+      "*",
+      "加",
+      "粗",
+      "文",
+      "本",
+      "*",
+      "*",
+      " ",
+      "或",
+      " ",
+      "_",
+      "_",
+      "加",
+      "粗",
+      "文",
+      "本",
+      "_",
+      "_"
+    ],
+    "timing": "sequential"
+  },
+  "expected": {
+    "steps": [
+      {
+        "after_chunk": 0,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 * 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 1,
+        "strategy_decision": "wait",
+        "display_html": "",
+        "reason": "单独的 ** 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 2,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加</strong></p>\n",
+        "reason": "检测到未闭合的 ** 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 6,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong></p>\n",
+        "reason": "继续补全加粗格式"
+      },
+      {
+        "after_chunk": 7,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong></p>\n",
+        "reason": "第三个 * 被过滤掉，保持加粗格式"
+      },
+      {
+        "after_chunk": 8,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong></p>\n",
+        "reason": "过滤多余的第三个 *"
+      },
+      {
+        "after_chunk": 10,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong> 或 </p>\n",
+        "reason": "解析到 '或 ' 的正常内容"
+      },
+      {
+        "after_chunk": 11,
+        "strategy_decision": "wait",
+        "display_html": "<p><strong>加粗文本</strong> 或 </p>\n",
+        "reason": "单独的 _ 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 12,
+        "strategy_decision": "wait",
+        "display_html": "<p><strong>加粗文本</strong> 或 </p>\n",
+        "reason": "单独的 __ 符号，等待更多输入"
+      },
+      {
+        "after_chunk": 13,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong> 或 <strong>加</strong></p>\n",
+        "reason": "检测到未闭合的 __ 且后面有内容，进行乐观补全"
+      },
+      {
+        "after_chunk": 17,
+        "strategy_decision": "complete",
+        "display_html": "<p><strong>加粗文本</strong> 或 <strong>加粗文本</strong></p>\n",
+        "reason": "继续补全下划线加粗格式"
+      }
+    ],
+    "final_state": {
+      "total_chunks_processed": 19,
+      "final_display": "<p><strong>加粗文本</strong> 或 <strong>加粗文本</strong></p>\n",
+      "strategy_calls": 19
+    }
+  }
+}
