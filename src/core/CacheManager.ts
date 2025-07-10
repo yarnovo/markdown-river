@@ -1,45 +1,24 @@
-import { StreamState } from '../types';
+import { EventEmitter } from '../events/EventEmitter';
 
 export class CacheManager {
   private content: string = '';
-  private lastParsedIndex: number = 0;
-  private streamState: StreamState = 'idle';
+  private eventEmitter: EventEmitter;
+
+  constructor(eventEmitter: EventEmitter) {
+    this.eventEmitter = eventEmitter;
+  }
 
   append(chunk: string): void {
     this.content += chunk;
+    // 添加内容后立即发送事件
+    this.eventEmitter.emit('cache:updated', { content: this.content });
   }
 
-  getFullContent(): string {
+  getContent(): string {
     return this.content;
-  }
-
-  getUnparsedContent(): string {
-    return this.content.slice(this.lastParsedIndex);
-  }
-
-  getParsedContent(): string {
-    return this.content.slice(0, this.lastParsedIndex);
-  }
-
-  updateParsedIndex(index: number): void {
-    this.lastParsedIndex = index;
-  }
-
-  getLastParsedIndex(): number {
-    return this.lastParsedIndex;
-  }
-
-  setStreamState(state: StreamState): void {
-    this.streamState = state;
-  }
-
-  getStreamState(): StreamState {
-    return this.streamState;
   }
 
   reset(): void {
     this.content = '';
-    this.lastParsedIndex = 0;
-    this.streamState = 'idle';
   }
 }

@@ -5,5 +5,6 @@ export type EventMap = {
   'buffer:status': BufferStatus;
   'stream:start': void;
   'stream:end': void;
+  'cache:updated': { content: string };
   error: Error;
 };

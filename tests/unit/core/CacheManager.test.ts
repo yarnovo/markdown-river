@@ -1,66 +1,49 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CacheManager } from '../../../src/core/CacheManager';
+import { EventEmitter } from '../../../src/events/EventEmitter';
 
 describe('CacheManager', () => {
   let cacheManager: CacheManager;
+  let eventEmitter: EventEmitter;
+  let eventHandler: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    cacheManager = new CacheManager();
+    eventEmitter = new EventEmitter();
+    cacheManager = new CacheManager(eventEmitter);
+    eventHandler = vi.fn();
   });
 
   describe('append', () => {
-    it('should append chunk to content', () => {
+    it('should append chunk to content and emit event', () => {
+      eventEmitter.on('cache:updated', eventHandler);
+
       cacheManager.append('Hello');
-      expect(cacheManager.getFullContent()).toBe('Hello');
+      expect(cacheManager.getContent()).toBe('Hello');
+      expect(eventHandler).toHaveBeenCalledWith({ content: 'Hello' });
 
       cacheManager.append(' World');
-      expect(cacheManager.getFullContent()).toBe('Hello World');
+      expect(cacheManager.getContent()).toBe('Hello World');
+      expect(eventHandler).toHaveBeenCalledWith({ content: 'Hello World' });
+      expect(eventHandler).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('getUnparsedContent', () => {
-    it('should return unparsed content', () => {
-      cacheManager.append('Hello World');
-      expect(cacheManager.getUnparsedContent()).toBe('Hello World');
+  describe('getContent', () => {
+    it('should return current content', () => {
+      expect(cacheManager.getContent()).toBe('');
 
-      cacheManager.updateParsedIndex(5);
-      expect(cacheManager.getUnparsedContent()).toBe(' World');
-    });
-  });
-
-  describe('getParsedContent', () => {
-    it('should return parsed content', () => {
-      cacheManager.append('Hello World');
-      expect(cacheManager.getParsedContent()).toBe('');
-
-      cacheManager.updateParsedIndex(5);
-      expect(cacheManager.getParsedContent()).toBe('Hello');
-    });
-  });
-
-  describe('stream state', () => {
-    it('should manage stream state correctly', () => {
-      expect(cacheManager.getStreamState()).toBe('idle');
-
-      cacheManager.setStreamState('streaming');
-      expect(cacheManager.getStreamState()).toBe('streaming');
-
-      cacheManager.setStreamState('ended');
-      expect(cacheManager.getStreamState()).toBe('ended');
+      cacheManager.append('Test');
+      expect(cacheManager.getContent()).toBe('Test');
     });
   });
 
   describe('reset', () => {
-    it('should reset all state', () => {
+    it('should clear content', () => {
       cacheManager.append('Hello World');
-      cacheManager.updateParsedIndex(5);
-      cacheManager.setStreamState('streaming');
+      expect(cacheManager.getContent()).toBe('Hello World');
 
       cacheManager.reset();
-
-      expect(cacheManager.getFullContent()).toBe('');
-      expect(cacheManager.getLastParsedIndex()).toBe(0);
-      expect(cacheManager.getStreamState()).toBe('idle');
+      expect(cacheManager.getContent()).toBe('');
     });
   });
 });

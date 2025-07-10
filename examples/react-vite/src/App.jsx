@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMarkdownRiver } from 'markdown-river';
 import { testCases } from '@markdown-river/test-suite';
 import './App.css';
@@ -11,12 +11,21 @@ function App() {
   const [currentCase, setCurrentCase] = useState('');
   const [streamInterval, setStreamInterval] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0); // 当前输入位置
+  const [customInput, setCustomInput] = useState(''); // 自定义输入
+  const [chunkIndex, setChunkIndex] = useState(0); // 当前chunk索引
   const { write, end, reset, content, rawHtml } = useMarkdownRiver({
     markedOptions: {
       breaks: true,
       gfm: true,
     },
   });
+
+  // 监听 rawHtml 变化并打印日志
+  useEffect(() => {
+    if (rawHtml) {
+      console.log(`[解析输出 - Chunk ${chunkIndex}] HTML:`, rawHtml);
+    }
+  }, [rawHtml, chunkIndex]);
 
   // 模拟流式输入
   const startStreaming = () => {
@@ -33,28 +42,58 @@ function App() {
       reset();
       setCurrentCase(selectedCase);
       setCurrentIndex(0);
+      setChunkIndex(0);
     }
 
     setIsStreaming(true);
     setIsPaused(false);
 
-    const text = testCases[currentCase || selectedCase];
-    let index = isRestart || !isPaused ? 0 : currentIndex; // 重新开始时从0开始
+    // 处理自定义输入
+    if (selectedCase === '自定义') {
+      // 使用逗号分割输入，创建chunk数组
+      const chunks = customInput.split(',').map(chunk => chunk.trim());
+      console.log('自定义输入chunks:', chunks);
 
-    const interval = setInterval(() => {
-      if (index < text.length) {
-        write(text[index]);
-        index++;
-        setCurrentIndex(index);
-      } else {
-        clearInterval(interval);
-        end();
-        setIsStreaming(false);
-        setStreamInterval(null);
-      }
-    }, speed); // 使用可调节的速度
+      let index = isRestart || !isPaused ? 0 : currentIndex;
 
-    setStreamInterval(interval);
+      const interval = setInterval(() => {
+        if (index < chunks.length) {
+          console.log(`[输入 Chunk ${index}]:`, chunks[index]);
+          write(chunks[index]);
+          setChunkIndex(index);
+          index++;
+          setCurrentIndex(index);
+        } else {
+          clearInterval(interval);
+          end();
+          setIsStreaming(false);
+          setStreamInterval(null);
+          console.log('流式输入完成');
+        }
+      }, speed);
+
+      setStreamInterval(interval);
+    } else {
+      // 原有的逐字符输入逻辑
+      const text = testCases[currentCase || selectedCase];
+      let index = isRestart || !isPaused ? 0 : currentIndex;
+
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          write(text[index]);
+          setChunkIndex(index);
+          index++;
+          setCurrentIndex(index);
+        } else {
+          clearInterval(interval);
+          end();
+          setIsStreaming(false);
+          setStreamInterval(null);
+        }
+      }, speed);
+
+      setStreamInterval(interval);
+    }
   };
 
   // 暂停流式输入 - 保持当前状态
@@ -93,8 +132,21 @@ function App() {
                   {caseName}
                 </option>
               ))}
+              <option value="自定义">自定义</option>
             </select>
           </label>
+          {selectedCase === '自定义' && (
+            <label>
+              自定义输入（逗号分隔）：
+              <input
+                type="text"
+                value={customInput}
+                onChange={e => setCustomInput(e.target.value)}
+                placeholder="如: *, h 或 Hello world, \n, *, h"
+                style={{ width: '300px' }}
+              />
+            </label>
+          )}
           {currentCase && <div className="current-case">当前用例：{currentCase}</div>}
           <label>
             速度：

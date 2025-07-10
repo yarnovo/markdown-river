@@ -1,12 +1,8 @@
 import { MarkedOptions } from 'marked';
-import { ParseStrategy } from '../strategies/ParseStrategy';
 
 export type StreamState = 'idle' | 'streaming' | 'ended';
 
-export { ParseStrategy };
-
 export interface MarkdownRiverOptions {
-  strategy?: ParseStrategy;
   markedOptions?: MarkedOptions;
 }
 

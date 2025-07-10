@@ -26,3 +26,5 @@ demo/static/
 tests/integration/io-cases/*/actual-outputs/
 
 .parcel-cache/
+
+.claude_temp/

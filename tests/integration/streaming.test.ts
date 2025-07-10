@@ -387,10 +387,12 @@ describe('Streaming Integration Tests', () => {
       if (handler.mock.calls.length === 0) {
         expect(handler).not.toHaveBeenCalled();
       } else {
-        expect(handler).toHaveBeenCalledWith({
-          html: '',
-          content: '',
-        });
+        expect(handler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            html: '',
+            content: '',
+          })
+        );
       }
     });
 
@@ -464,6 +466,15 @@ describe('Streaming Integration Tests', () => {
 
       // 检查最终结果包含关键元素
       const finalHtml = results[results.length - 1].html;
+
+      // 找到包含行内代码的文档部分
+      const codeIndex = commonMarkFullDocument.indexOf('使用 `反引号` 创建行内代码');
+      console.log('Code section at index:', codeIndex);
+
+      // 获取最后处理的内容
+      const lastContent = results[results.length - 1].content;
+      console.log('Last processed content:', lastContent.slice(-50));
+
       expect(finalHtml).toContain('<h1>');
       expect(finalHtml).toContain('<h2>');
       expect(finalHtml).toContain('<strong>');

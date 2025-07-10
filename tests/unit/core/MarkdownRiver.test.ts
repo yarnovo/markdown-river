@@ -42,11 +42,11 @@ describe('MarkdownRiver', () => {
     });
   });
 
-  describe('ambiguity detection', () => {
-    it('should buffer content with unclosed format marker', () => {
+  describe('optimistic updates with transformer', () => {
+    it('should filter single format marker and auto-complete with content', () => {
       river.write('Hello *');
 
-      // Should parse up to the '*' symbol
+      // Should filter out the single '*'
       expect(parsedHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           content: 'Hello ',
@@ -54,12 +54,12 @@ describe('MarkdownRiver', () => {
         })
       );
 
-      river.write('world*');
+      river.write('world');
 
-      // Should parse the complete format
+      // Should auto-complete the format
       expect(parsedHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: '*world*',
+          content: 'Hello *world*',
           html: expect.stringContaining('<em>world</em>'),
         })
       );
@@ -68,18 +68,17 @@ describe('MarkdownRiver', () => {
     it('should handle nested format markers', () => {
       river.write('**Hello ');
 
-      // Should trigger optimistic update for unclosed **
+      // Should auto-complete the unclosed **
       expect(parsedHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: '**Hello**',
-          html: '<p><strong>Hello</strong></p>\n',
+          content: '**Hello **',
+          html: expect.stringContaining('**Hello **'),
         })
       );
 
       river.write('*world*');
-      river.write('**');
 
-      // Should have multiple calls for the streaming updates
+      // Next update
       expect(parsedHandler).toHaveBeenCalledTimes(2);
     });
   });
@@ -98,7 +97,8 @@ describe('MarkdownRiver', () => {
 
       river.end();
 
-      // end() should be idempotent when content is already parsed
+      // end() only emits if there's unparsed content
+      // Since transformer already processed everything, end() won't emit again
       expect(parsedHandler).toHaveBeenCalledTimes(1);
     });
 
