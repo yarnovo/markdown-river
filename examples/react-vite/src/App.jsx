@@ -78,7 +78,7 @@ function App() {
             <input
               type="range"
               min="5"
-              max="100"
+              max="200"
               value={speed}
               onChange={e => setSpeed(Number(e.target.value))}
               disabled={isStreaming}
