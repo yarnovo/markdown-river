@@ -41,7 +41,8 @@
   },
   "homepage": "https://github.com/yarnovo/markdown-river#readme",
   "workspaces": [
-    "examples/*"
+    "examples/*",
+    "test-suite"
   ],
   "files": [
     "dist/"

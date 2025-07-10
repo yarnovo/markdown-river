@@ -76,18 +76,15 @@ export class MarkdownRiver {
     const fullContent = this.cacheManager.getFullContent();
     const lastParsedIndex = this.cacheManager.getLastParsedIndex();
 
-    // 检查是否有歧义
-    const hasAmbiguity = this.strategy.hasAmbiguity(fullContent, lastParsedIndex);
+    // 使用策略处理内容
+    const result = this.strategy.process(fullContent, lastParsedIndex);
 
-    if (!hasAmbiguity) {
-      // 无歧义，解析所有未处理内容
-      this.parseAndEmit(fullContent.length);
-    } else {
-      // 有歧义，尝试找到安全解析位置
-      const safeIndex = this.strategy.getSafeParseIndex(fullContent, lastParsedIndex);
-      if (safeIndex > lastParsedIndex) {
-        this.parseAndEmit(safeIndex);
-      }
+    if (typeof result === 'string') {
+      // 策略返回了处理后的内容，直接使用
+      this.parseAndEmitCustomContent(result);
+    } else if (result > lastParsedIndex) {
+      // 策略返回了安全解析位置
+      this.parseAndEmit(result);
     }
   }
 
@@ -120,5 +117,20 @@ export class MarkdownRiver {
         reason: 'Ambiguity detected',
       });
     }
+  }
+
+  private parseAndEmitCustomContent(customContent: string): void {
+    // 解析策略提供的自定义内容
+    const html = this.parser.parse(customContent);
+
+    // 更新解析位置到全部内容
+    const fullContent = this.cacheManager.getFullContent();
+    this.cacheManager.updateParsedIndex(fullContent.length);
+
+    this.eventEmitter.emit('content:parsed', {
+      html,
+      content: customContent,
+      timestamp: Date.now(),
+    });
   }
 }

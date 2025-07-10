@@ -46,15 +46,20 @@ describe('MarkdownRiver', () => {
     it('should buffer content with unclosed format marker', () => {
       river.write('Hello *');
 
-      // Should not parse yet due to ambiguity
-      expect(parsedHandler).not.toHaveBeenCalled();
+      // Should parse up to the '*' symbol
+      expect(parsedHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Hello ',
+          html: '<p>Hello </p>\n',
+        })
+      );
 
       river.write('world*');
 
-      // Now it should parse
+      // Should parse the complete format
       expect(parsedHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          content: 'Hello *world*',
+          content: '*world*',
           html: expect.stringContaining('<em>world</em>'),
         })
       );
@@ -62,29 +67,39 @@ describe('MarkdownRiver', () => {
 
     it('should handle nested format markers', () => {
       river.write('**Hello ');
-      expect(parsedHandler).not.toHaveBeenCalled();
+
+      // Should trigger optimistic update for unclosed **
+      expect(parsedHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: '**Hello**',
+          html: '<p><strong>Hello</strong></p>\n',
+        })
+      );
 
       river.write('*world*');
-      expect(parsedHandler).not.toHaveBeenCalled();
-
       river.write('**');
-      expect(parsedHandler).toHaveBeenCalled();
+
+      // Should have multiple calls for the streaming updates
+      expect(parsedHandler).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('end() method', () => {
     it('should force parse all remaining content', () => {
       river.write('Hello *incomplete');
-      expect(parsedHandler).not.toHaveBeenCalled();
+
+      // Should trigger optimistic update immediately
+      expect(parsedHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'Hello *incomplete*',
+          html: '<p>Hello <em>incomplete</em></p>\n',
+        })
+      );
 
       river.end();
 
-      // Should parse despite unclosed marker
-      expect(parsedHandler).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: 'Hello *incomplete',
-        })
-      );
+      // end() should be idempotent when content is already parsed
+      expect(parsedHandler).toHaveBeenCalledTimes(1);
     });
 
     it('should handle multiple end() calls gracefully', () => {

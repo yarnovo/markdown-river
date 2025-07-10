@@ -1,0 +1,26 @@
+{
+  "name": "@markdown-river/test-suite",
+  "version": "0.1.0",
+  "description": "CommonMark 测试套件 - 包含各种 Markdown 语法测试用例",
+  "main": "index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "data/"
+  ],
+  "keywords": [
+    "markdown",
+    "commonmark",
+    "test",
+    "suite"
+  ],
+  "author": "",
+  "license": "ISC"
+}
