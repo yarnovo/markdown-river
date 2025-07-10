@@ -19,7 +19,12 @@ export function useMarkdownRiver(options: MarkdownRiverOptions = {}): UseMarkdow
     () => ({
       replace: domNode => {
         if (domNode.type === 'tag' && 'name' in domNode) {
-          const node = domNode as any;
+          const node = domNode as unknown as {
+            name: string;
+            startIndex?: number;
+            attribs?: Record<string, string>;
+            children?: unknown[];
+          };
           // 为元素生成稳定的 key
           const key = `${node.name}-${node.startIndex || 0}`;
 
@@ -29,7 +34,9 @@ export function useMarkdownRiver(options: MarkdownRiverOptions = {}): UseMarkdow
             key,
             props: {
               ...node.attribs,
-              children: node.children ? domToReact(node.children, parserOptions) : undefined,
+              children: node.children
+                ? domToReact(node.children as never[], parserOptions)
+                : undefined,
             },
           };
         }
@@ -54,11 +61,11 @@ export function useMarkdownRiver(options: MarkdownRiverOptions = {}): UseMarkdow
     };
   }, []);
 
-  const write = (chunk: string) => {
+  const write = (chunk: string): void => {
     riverRef.current?.write(chunk);
   };
 
-  const end = () => {
+  const end = (): void => {
     riverRef.current?.end();
   };
 

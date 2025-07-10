@@ -6,12 +6,12 @@ describe('MarkdownParser', () => {
 
   beforeAll(() => {
     // Mock document for Node.js environment
-    global.document = {
+    (global as { document?: unknown }).document = {
       createElement: vi.fn(() => ({
         textContent: '',
         innerHTML: '',
       })),
-    } as any;
+    };
   });
 
   beforeEach(() => {
@@ -84,16 +84,24 @@ describe('MarkdownParser', () => {
       const errorParser = new MarkdownParser();
 
       // Mock the escapeHtml method to work in test environment
-      (errorParser as any).escapeHtml = (text: string) => text;
+      (errorParser as unknown as { escapeHtml: (text: string) => string }).escapeHtml = (
+        text: string
+      ) => text;
 
-      // Force an error by passing invalid options
-      errorParser.configure({ renderer: { invalid: true } as any });
+      // Mock the markedInstance to throw an error
+      const errorInstance = {
+        parse: vi.fn().mockImplementation(() => {
+          throw new Error('Mocked parsing error');
+        }),
+      };
+      (errorParser as unknown as { markedInstance: unknown }).markedInstance = errorInstance;
 
       // This should trigger error handling
-      const result = errorParser.parse('\x00\x01\x02'); // Invalid characters
+      const result = errorParser.parse('some content');
 
       // The result should be wrapped in pre tag
-      expect(result).toBeDefined();
+      expect(result).toBe('<pre>some content</pre>');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Markdown parsing error:', expect.any(Error));
 
       consoleErrorSpy.mockRestore();
     });

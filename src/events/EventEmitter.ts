@@ -20,8 +20,8 @@ export class EventEmitter {
     this.mitt.emit(event, data);
   }
 
-  all(): Map<keyof EventMap, Array<(data: any) => void>> {
-    return this.mitt.all as any;
+  all(): Map<keyof EventMap, Array<(data: unknown) => void>> {
+    return this.mitt.all as Map<keyof EventMap, Array<(data: unknown) => void>>;
   }
 
   clear(): void {

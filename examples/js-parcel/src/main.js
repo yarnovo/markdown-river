@@ -90,7 +90,7 @@ function startStreaming() {
   isStreaming = true;
   startBtn.disabled = true;
   startBtn.textContent = '正在输入...';
-  strategySelect.disabled = true;
+  // 策略选择器已移除
 
   // 模拟流式输入
   let index = 0;
@@ -136,7 +136,6 @@ function parseInput() {
 }
 
 // 绑定事件
-startBtn.addEventListener('click', startStreaming);
 resetBtn.addEventListener('click', reset);
 compareBtn.addEventListener('click', parseInput);
 
@@ -151,7 +150,7 @@ comparisonInput.addEventListener('keypress', e => {
 const speedSlider = document.getElementById('speed-slider');
 const speedValue = document.getElementById('speed-value');
 
-speedSlider.addEventListener('input', (e) => {
+speedSlider.addEventListener('input', e => {
   streamingSpeed = Number(e.target.value);
   speedValue.textContent = `${streamingSpeed}ms`;
 });
@@ -163,10 +162,13 @@ function updateSpeedControl(disabled) {
 
 // 修改开始函数以禁用速度控制
 const originalStartStreaming = startStreaming;
-startStreaming = function() {
+function startStreamingWrapper() {
   updateSpeedControl(true);
   originalStartStreaming();
-};
+}
+
+// 使用包装函数
+startBtn.addEventListener('click', startStreamingWrapper);
 
 // 设置默认对比文本
 comparisonInput.value = '*Hello* **world**';

@@ -14,6 +14,9 @@ export default tseslint.config(
       'test-repo/**',
       '.test-repos/**',
       'demo/static/**',
+      'examples/**/dist/**',
+      'examples/**/node_modules/**',
+      '.parcel-cache/**',
     ],
   },
   {
@@ -36,7 +39,7 @@ export default tseslint.config(
           varsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': [
         'warn',
         {

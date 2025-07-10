@@ -1,7 +1,8 @@
-import { marked, MarkedOptions } from 'marked';
+import { MarkedOptions, Marked } from 'marked';
 
 export class MarkdownParser {
   private options: MarkedOptions;
+  private markedInstance: Marked;
 
   constructor(options: MarkedOptions = {}) {
     this.options = {
@@ -9,12 +10,13 @@ export class MarkdownParser {
       gfm: true,
       ...options,
     };
-    this.configure(this.options);
+    this.markedInstance = new Marked();
+    this.markedInstance.setOptions(this.options);
   }
 
   parse(content: string): string {
     try {
-      return marked(content, this.options) as string;
+      return this.markedInstance.parse(content) as string;
     } catch (error) {
       // 降级处理：返回纯文本包裹在 pre 标签中
       console.error('Markdown parsing error:', error);
@@ -24,7 +26,7 @@ export class MarkdownParser {
 
   configure(options: MarkedOptions): void {
     this.options = { ...this.options, ...options };
-    marked.setOptions(this.options);
+    this.markedInstance.setOptions(this.options);
   }
 
   private escapeHtml(text: string): string {
