@@ -125,14 +125,28 @@ function parseInput() {
   let resultHtml = '';
   parseRiver.on('content:parsed', ({ html }) => {
     resultHtml = html;
+    // 实时更新显示
+    parseResult.innerHTML = resultHtml || '<em>（无输出）</em>';
   });
 
-  // 逐字符输入
-  for (const char of input) {
-    parseRiver.write(char);
+  // 逐字符流式输入
+  let charIndex = 0;
+
+  function writeNextChar() {
+    if (charIndex < input.length) {
+      const char = input[charIndex];
+      parseRiver.write(char);
+      charIndex++;
+
+      // 延迟写入下一个字符，模拟真实的流式输入
+      setTimeout(writeNextChar, 50);
+    } else {
+      parseRiver.end();
+    }
   }
-  parseRiver.end();
-  parseResult.innerHTML = resultHtml || '<em>（无输出）</em>';
+
+  // 开始写入
+  writeNextChar();
 }
 
 // 绑定事件
@@ -171,4 +185,4 @@ function startStreamingWrapper() {
 startBtn.addEventListener('click', startStreamingWrapper);
 
 // 设置默认对比文本
-comparisonInput.value = '*Hello* **world**';
+comparisonInput.value = '```javascript\nconst msg = "hello";\nconsole.log(msg);';

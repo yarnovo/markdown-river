@@ -24,3 +24,5 @@ demo/static/
 
 # Test outputs
 tests/integration/io-cases/*/actual-outputs/
+
+.parcel-cache/

@@ -21,6 +21,33 @@ yarn add markdown-river
 pnpm add markdown-river
 ```
 
+## 开发环境设置
+
+如果你要开发或测试 Markdown River，请按以下步骤设置：
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/yarnovo/markdown-river.git
+cd markdown-river
+
+# 2. 安装依赖
+npm install
+
+# 3. 设置开发环境（使用 npm link）
+npm run dev:setup
+
+# 4. 启动构建监听（可选）
+npm run build:watch
+```
+
+**为什么使用 npm link？**
+
+- 示例项目会实时使用最新的构建结果
+- 无需手动更新 node_modules
+- 避免 `file:../..` 相对路径的缓存问题
+
+详细说明请查看 [开发环境设置文档](./docs/development-setup.md)。
+
 ## 快速开始
 
 ### 基础用法

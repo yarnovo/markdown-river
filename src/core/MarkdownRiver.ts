@@ -77,7 +77,9 @@ export class MarkdownRiver {
     const lastParsedIndex = this.cacheManager.getLastParsedIndex();
 
     // 检查是否有歧义
-    if (!this.strategy.hasAmbiguity(fullContent, lastParsedIndex)) {
+    const hasAmbiguity = this.strategy.hasAmbiguity(fullContent, lastParsedIndex);
+
+    if (!hasAmbiguity) {
       // 无歧义，解析所有未处理内容
       this.parseAndEmit(fullContent.length);
     } else {

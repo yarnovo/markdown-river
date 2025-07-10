@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
     "dev": "tsx demo/index.ts",
     "copy-dist": "node scripts/copy-dist-to-demo.js",
     "demo": "npm run build && npm run copy-dist && serve demo -p 3000",
@@ -39,6 +40,9 @@
     "url": "https://github.com/yarnovo/markdown-river/issues"
   },
   "homepage": "https://github.com/yarnovo/markdown-river#readme",
+  "workspaces": [
+    "examples/*"
+  ],
   "files": [
     "dist/"
   ],

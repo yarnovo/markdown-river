@@ -1,68 +1,63 @@
 # Markdown River 示例项目
 
-本目录包含了 Markdown River 的使用示例，展示了如何在不同环境中集成这个流式 Markdown 渲染器。
+这个目录包含了展示如何使用 Markdown River 的示例项目：
 
-## 示例项目
+- **react-vite**: React + Vite 示例，展示如何使用 React Hook
+- **js-parcel**: 原生 JavaScript + Parcel 示例，展示基础 API 用法
 
-### 1. React + Vite 示例
+## 开发说明
 
-位置：`./react-vite/`
+### 依赖管理
 
-这个示例展示了如何在 React 应用中使用 Markdown River 的 Hook API。
+示例项目使用 `npm link` 来引用主项目，而不是 `file:../..`。这样做的好处：
 
-**运行方法**：
+1. **避免缓存问题**：修改主项目代码后，无需删除 node_modules
+2. **实时更新**：重新构建主项目后，示例自动使用最新版本
+3. **开发效率**：配合 `npm run build:watch` 可以实时查看更改
 
-```bash
-cd react-vite
-npm install
-npm run dev
-```
+### 初始设置
 
-**特性**：
-
-- 使用 `useMarkdownRiver` Hook
-- 展示流式 AI 响应渲染
-- 支持速度控制（5-100ms）
-- 实时查看原始 HTML 输出
-
-### 2. 原生 JavaScript + Parcel 示例
-
-位置：`./js-parcel/`
-
-这个示例展示了如何在纯 JavaScript 环境中使用 Markdown River。
-
-**运行方法**：
+如果你刚克隆仓库，运行：
 
 ```bash
-cd js-parcel
-npm install
-npm run dev
+# 在根目录
+npm run dev:setup
 ```
 
-**特性**：
+这会自动：
 
-- 原生 JavaScript API 使用
-- 流式渲染演示
-- 实时解析功能
-- 交互式 Markdown 输入测试
-- 支持速度控制（5-100ms）
+1. 构建主项目
+2. 创建 npm link
+3. 在示例项目中链接主项目
 
-## 核心功能演示
+### 日常开发流程
 
-两个示例都展示了以下核心功能：
+1. **修改核心库代码**
+2. **在根目录运行**：
+   ```bash
+   npm run build
+   # 或使用监听模式
+   npm run build:watch
+   ```
+3. **示例项目会自动使用最新构建**
 
-1. **流式渲染**：模拟 AI 逐字符返回 Markdown 文本的场景
-2. **无闪烁体验**：格式符号不会先显示再消失
-3. **速度控制**：可调节字符输出速度（5-100ms）
-4. **实时解析**：展示 Markdown River 的实时处理能力
+### 常见问题
 
-## 开发提示
+**Q: 为什么不使用 `file:../..`？**
 
-在开发自己的应用时，请注意：
+A: 使用相对路径会有缓存问题，每次更新都需要删除 node_modules 重装，非常麻烦。
 
-1. 确保先安装 `markdown-river` 依赖
-2. 根据你的框架选择合适的集成方式（Hook 或直接使用类）
-3. 配置合适的解析策略和 marked 选项
-4. 监听 `content:parsed` 事件获取解析结果
+**Q: 如何清理并重新设置？**
 
-更多详细信息，请参考项目的主 README 文档。
+```bash
+# 清理
+rm -rf node_modules examples/*/node_modules
+
+# 重新设置
+npm install
+npm run dev:setup
+```
+
+**Q: 发布前需要做什么？**
+
+发布前需要将 package.json 中的依赖改为真实版本号，而不是 link。

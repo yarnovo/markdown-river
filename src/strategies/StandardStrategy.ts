@@ -9,6 +9,14 @@ export class StandardStrategy implements ParseStrategy {
       return false;
     }
 
+    // 特殊处理代码块：Marked 能自动处理不完全的代码块
+    // 需要检查全量内容，因为代码块可能跨越已解析和未解析部分
+    const fullMatches = content.match(/```/g);
+    if (fullMatches && fullMatches.length % 2 !== 0) {
+      // 有未闭合的代码块，但 Marked 能自动处理
+      return false;
+    }
+
     // 检查是否有未配对的格式标记
     let i = 0;
 
@@ -17,14 +25,15 @@ export class StandardStrategy implements ParseStrategy {
       const next = unparsed[i + 1];
       const prev = i > 0 ? unparsed[i - 1] : '';
 
-      // 代码块特殊处理
+      // 代码块特殊处理 - 跳过整个代码块区域
       if (char === '`' && next === '`' && unparsed[i + 2] === '`') {
-        // 三个反引号
         const codeBlockIndex = unparsed.indexOf('```', i + 3);
         if (codeBlockIndex === -1) {
-          return true; // 未闭合的代码块
+          // 这种情况已经在上面处理了
+          return false;
+        } else {
+          i = codeBlockIndex + 2;
         }
-        i = codeBlockIndex + 2;
       }
       // 内联代码
       else if (char === '`') {
