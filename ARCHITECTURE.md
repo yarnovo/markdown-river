@@ -437,9 +437,128 @@ graph TB
 - 事件保护：隔离监听器错误
 - 资源保护：防止内存泄漏
 
-## 9. 最佳实践
+## 9. 类设计与关系
 
-### 9.1 参数调优建议
+### 9.1 核心类图
+
+```mermaid
+classDiagram
+    class MarkdownRiver {
+        -cacheManager: CacheManager
+        -strategy: ParseStrategy
+        -parser: MarkdownParser
+        -eventEmitter: EventEmitter
+        +constructor(options: MarkdownRiverOptions)
+        +write(chunk: string): void
+        +end(): void
+        +on(event: string, handler: Function): void
+        +off(event: string, handler: Function): void
+        +destroy(): void
+    }
+
+    class CacheManager {
+        -content: string
+        -lastParsedIndex: number
+        -streamState: StreamState
+        +append(chunk: string): void
+        +getFullContent(): string
+        +getUnparsedContent(): string
+        +getParsedContent(): string
+        +updateParsedIndex(index: number): void
+        +reset(): void
+    }
+
+    class ParseStrategy {
+        <<interface>>
+        +hasAmbiguity(content: string, lastIndex: number): boolean
+        +getSafeParseIndex(content: string, lastIndex: number): number
+    }
+
+    class StandardStrategy {
+        +hasAmbiguity(content: string, lastIndex: number): boolean
+        +getSafeParseIndex(content: string, lastIndex: number): number
+    }
+
+    class ConservativeStrategy {
+        +hasAmbiguity(content: string, lastIndex: number): boolean
+        +getSafeParseIndex(content: string, lastIndex: number): number
+    }
+
+    class MarkdownParser {
+        -marked: Marked
+        -options: MarkedOptions
+        +parse(content: string): string
+        +configure(options: MarkedOptions): void
+    }
+
+    class EventEmitter {
+        -mitt: Emitter
+        +on(event: string, handler: Function): void
+        +off(event: string, handler: Function): void
+        +emit(event: string, data: any): void
+        +all(): Map
+    }
+
+    MarkdownRiver --> CacheManager
+    MarkdownRiver --> ParseStrategy
+    MarkdownRiver --> MarkdownParser
+    MarkdownRiver --> EventEmitter
+    StandardStrategy ..|> ParseStrategy
+    ConservativeStrategy ..|> ParseStrategy
+```
+
+### 9.2 文件结构设计
+
+```
+markdown-river/
+├── src/
+│   ├── index.ts                    # 主入口，导出所有公共 API
+│   ├── core/
+│   │   ├── MarkdownRiver.ts       # 核心类
+│   │   ├── CacheManager.ts        # 缓存管理器
+│   │   └── MarkdownParser.ts      # Markdown 解析器封装
+│   ├── strategies/
+│   │   ├── index.ts               # 策略导出
+│   │   ├── ParseStrategy.ts       # 策略接口定义
+│   │   ├── StandardStrategy.ts    # 标准策略实现
+│   │   └── ConservativeStrategy.ts # 保守策略实现
+│   ├── events/
+│   │   ├── EventEmitter.ts        # 事件发射器封装
+│   │   └── types.ts               # 事件类型定义
+│   ├── react/
+│   │   └── useMarkdownRiver.ts    # React Hook
+│   └── types/
+│       └── index.ts               # 公共类型定义
+├── tests/
+│   ├── unit/
+│   │   ├── core/
+│   │   │   ├── MarkdownRiver.test.ts
+│   │   │   ├── CacheManager.test.ts
+│   │   │   └── MarkdownParser.test.ts
+│   │   └── strategies/
+│   │       ├── StandardStrategy.test.ts
+│   │       └── ConservativeStrategy.test.ts
+│   └── integration/
+│       ├── streaming.test.ts       # 流式渲染集成测试
+│       └── react-hook.test.ts     # React Hook 集成测试
+└── dist/                          # 构建输出
+```
+
+### 9.3 模块职责
+
+| 模块             | 职责                      | 依赖              |
+| ---------------- | ------------------------- | ----------------- |
+| MarkdownRiver    | 协调各模块，提供对外 API  | 所有内部模块      |
+| CacheManager     | 管理内容缓存和解析位置    | 无                |
+| ParseStrategy    | 定义歧义检测接口          | 无                |
+| StandardStrategy | 实现标准歧义检测          | ParseStrategy     |
+| MarkdownParser   | 封装 marked，提供解析功能 | marked            |
+| EventEmitter     | 封装 mitt，提供事件功能   | mitt              |
+| useMarkdownRiver | React 集成                | html-react-parser |
+
+## 10. 最佳实践
+
+### 10.1 参数调优建议
 
 1. **分析使用场景**
    - 输入速度：快速输入需要更大的字符阈值

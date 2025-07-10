@@ -103,5 +103,30 @@ export default tseslint.config(
       'prettier/prettier': 'error',
       ...prettierConfig.rules,
     },
+  },
+  {
+    files: ['examples/**/*.js', 'examples/**/*.jsx'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        performance: 'readonly',
+      },
+    },
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      'prettier/prettier': 'error',
+      ...prettierConfig.rules,
+    },
   }
 );
