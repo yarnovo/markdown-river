@@ -71,18 +71,27 @@ graph TB
 ```mermaid
 flowchart LR
     A[字符输入] --> B[追加到缓存]
-    B --> C[歧义检测]
-    C -->|有歧义| D[继续等待]
-    C -->|无歧义| E[解析未处理部分]
+    B --> C[策略处理]
+    C -->|返回位置| D[解析到指定位置]
+    C -->|返回字符串| E[解析策略内容]
 
-    D --> A
-    E --> F[marked 解析]
-    F --> G[生成 HTML]
-    G --> H[触发事件]
-    H --> I[UI 更新]
+    D --> F[marked 解析原内容]
+    E --> G[marked 解析策略内容]
 
-    J["end() 调用"] --> K[强制解析全部]
-    K --> F
+    F --> H[生成 HTML]
+    G --> H
+    H --> I[更新解析位置]
+    I --> J[触发事件]
+    J --> K[UI 更新]
+
+    L[检测到未闭合格式] --> M{后面有内容?}
+    M -->|是| N[乐观补全]
+    M -->|否| O[等待更多输入]
+    N --> E
+    O --> P[保持当前位置]
+
+    Q["end() 调用"] --> R[强制解析全部]
+    R --> F
 ```
 
 ### 2.3 核心组件说明
@@ -120,27 +129,35 @@ flowchart LR
 - 提供未解析内容的访问接口
 - 管理流状态（未开始/进行中/已结束）
 
-#### 2.3.3 歧义检测策略（Ambiguity Detection Strategy）
+#### 2.3.3 智能渲染策略（Intelligent Rendering Strategy）
 
-**职责**：基于全量上下文判断是否存在歧义
+**职责**：基于全量上下文决定渲染方式和内容
 
 **接口设计**：
 
 ```typescript
 interface ParseStrategy {
-  // 接收全量内容和已解析位置
-  hasAmbiguity(fullContent: string, lastParsedIndex: number): boolean;
-
-  // 返回可以安全解析的位置
-  getSafeParseIndex(fullContent: string, lastParsedIndex: number): number;
+  /**
+   * 处理内容并返回渲染策略
+   * @param content 完整内容
+   * @param lastParsedIndex 上次解析位置
+   * @returns 安全解析位置（number）或处理后的内容（string）
+   */
+  process(content: string, lastParsedIndex: number): number | string;
 }
 ```
 
+**返回值类型**：
+
+- **number**：返回安全解析位置，使用原内容解析到该位置
+- **string**：返回处理后的内容，直接解析该字符串（乐观更新）
+
 **策略特点**：
 
+- 统一的单方法接口，简化调用逻辑
+- 支持乐观更新机制，提供即时反馈
 - 可以访问全量内容，不限于未解析部分
-- 自主决定检测范围和方式
-- 支持不同场景的定制策略
+- 支持内容转换和自动补全功能
 
 #### 2.3.4 Markdown 解析器
 
@@ -194,7 +211,7 @@ interface ParseStrategy {
 
 ### 3.3 智能缓存机制
 
-**核心理念**：基于全量上下文进行歧义检测，只有歧义消除时才解析输出。
+**核心理念**：基于全量上下文进行智能处理，支持乐观更新和即时反馈。
 
 ```mermaid
 graph TB
@@ -204,60 +221,79 @@ graph TB
 
     C --> E[新字符到达]
     E --> F[追加到缓存]
-    F --> G{歧义检测}
+    F --> G[策略处理]
 
-    G -->|有歧义| H[继续缓存]
-    G -->|无歧义| I[解析未处理部分]
+    G -->|返回位置| H[解析到指定位置]
+    G -->|返回字符串| I[乐观解析策略内容]
 
-    H --> E
-    I --> J[更新解析位置]
+    H --> J[更新解析位置]
+    I --> J
     J --> K[输出新内容]
+    K --> E
 
     D --> L["end() 调用"]
     L --> M[强制解析所有内容]
 ```
 
-### 3.4 歧义检测策略
+### 3.4 乐观更新策略
 
-**歧义检测原理**：
+**乐观更新原理**：
 
-- 基于全量上下文进行判断
-- 通常检测末尾字符的格式可能性
-- 采用倒序扫描策略
+- 基于全量上下文进行智能判断
+- 检测未闭合的行内格式符号
+- 自动补全闭合标签，提供即时反馈
 
 ```mermaid
 graph LR
-    A["缓存内容: Hello *"] --> B{检测末尾}
-    B --> C[发现 * 符号]
-    C --> D{判断歧义}
-    D -->|可能是斜体开始| E[有歧义]
-    D -->|可能是普通星号| E
+    A["输入: *hello"] --> B{检测格式符号}
+    B --> C[发现未闭合 *]
+    C --> D{后面有内容?}
+    D -->|是| E[乐观补全: *hello*]
+    D -->|否| F[等待更多输入]
 
-    F["缓存内容: Hello *world*"] --> G{检测末尾}
-    G --> H[发现完整格式]
-    H --> I[无歧义]
+    E --> G[立即渲染斜体]
+    F --> H[保持当前位置]
+
+    I["输入: *hello*"] --> J[检测完整格式]
+    J --> K[正常解析]
 ```
 
-**常见歧义场景**：
+**支持的乐观更新场景**：
 
-- 单个 `*` 或 `**`：格式标记或普通字符
-- `` ` ``：代码块开始或普通反引号
-- `[`：链接开始或普通方括号
-- 未闭合的格式符号
+- 行内代码：`` `code` `` → 自动补全反引号
+- 斜体/强调：`*text*`、`**text**` → 自动补全星号
+- 下划线格式：`_text_`、`__text__` → 自动补全下划线
+- 链接：`[text]()` → 自动补全链接语法
+- 列表：`-` 立即渲染，`- ` 智能等待
 
-### 3.5 解析策略接口
+### 3.5 智能策略接口
 
 ```typescript
 interface ParseStrategy {
-  // 基于全量上下文判断是否有歧义
-  hasAmbiguity(fullContent: string, lastParsedIndex: number): boolean;
-
-  // 获取可以安全解析的位置
-  getSafeParseIndex(fullContent: string, lastParsedIndex: number): number;
+  /**
+   * 处理内容并返回渲染策略
+   * @param content 完整内容
+   * @param lastParsedIndex 上次解析位置
+   * @returns 安全解析位置（number）或处理后的内容（string）
+   */
+  process(content: string, lastParsedIndex: number): number | string;
 }
 ```
 
+**StandardStrategy 工作流程**：
+
+1. **列表特殊处理**：单独 `-` 立即渲染，`- ` 智能等待
+2. **未匹配符号检测**：扫描未解析内容，找到第一个未匹配的格式符号
+3. **智能决策**：
+   - 无未匹配符号 → 解析到末尾
+   - 符号前有完整内容 → 优先解析完整部分
+   - 符号后有内容 → 乐观更新（自动补全）
+   - 符号后无内容 → 保持位置等待
+4. **自动补全规则**：根据格式类型生成补全内容
+
 ### 3.6 工作流程示例
+
+#### 3.6.1 乐观更新场景
 
 ```
 初始状态：
@@ -267,35 +303,48 @@ interface ParseStrategy {
 
 输入 "Hello "：
 缓存: "Hello "
-已解析: "Hello "  （无歧义，立即解析）
+已解析: "Hello "  （无格式符号，立即解析）
 未解析: ""
 
 输入 "*"：
 缓存: "Hello *"
-已解析: "Hello "  （末尾有歧义，暂不解析）
+已解析: "Hello "  （符号后无内容，等待）
 未解析: "*"
 
 输入 "world"：
 缓存: "Hello *world"
-已解析: "Hello "  （仍有歧义，继续等待）
-未解析: "*world"
+策略返回: "Hello *world*"  （乐观补全）
+已解析: "Hello *world*"   （立即显示斜体）
+未解析: ""
 
 输入 "*"：
 缓存: "Hello *world*"
-已解析: "Hello *world*"  （歧义消除，解析斜体）
+已解析: "Hello *world*"  （内容未变，保持）
 未解析: ""
+```
+
+#### 3.6.2 优先解析完整部分
+
+```
+输入 "Good *morning* and *"：
+缓存: "Good *morning* and *"
+检测结果: 前面有完整格式 "*morning*"
+策略返回: 17 (解析到 "and" 后面)
+已解析: "Good *morning* and "
+未解析: "*"  （等待后续输入）
 ```
 
 ### 3.7 关键参数
 
-- **strategy**: 歧义检测策略 - 可插拔的策略模式
+- **strategy**: 智能渲染策略 - 可插拔的策略模式，支持乐观更新
 - **streamState**: 流状态 - 未开始/进行中/已结束
 
-**注意**：
+**策略特性**：
 
 - 没有缓冲区大小限制（全量缓存）
-- 没有超时机制（有歧义就等待）
-- end() 方法会立即消除歧义阻塞
+- 支持即时反馈（乐观更新）
+- 智能决策（优先完整部分 vs 乐观补全）
+- end() 方法会立即强制解析所有内容
 
 ### 3.8 配置示例
 
@@ -470,18 +519,13 @@ classDiagram
 
     class ParseStrategy {
         <<interface>>
-        +hasAmbiguity(content: string, lastIndex: number): boolean
-        +getSafeParseIndex(content: string, lastIndex: number): number
+        +process(content: string, lastIndex: number): number | string
     }
 
     class StandardStrategy {
-        +hasAmbiguity(content: string, lastIndex: number): boolean
-        +getSafeParseIndex(content: string, lastIndex: number): number
-    }
-
-    class ConservativeStrategy {
-        +hasAmbiguity(content: string, lastIndex: number): boolean
-        +getSafeParseIndex(content: string, lastIndex: number): number
+        +process(content: string, lastIndex: number): number | string
+        -detectUnmatchedSymbols(unparsed: string): object
+        -generateOptimisticContent(type: string, content: string): string
     }
 
     class MarkdownParser {
@@ -504,7 +548,6 @@ classDiagram
     MarkdownRiver --> MarkdownParser
     MarkdownRiver --> EventEmitter
     StandardStrategy ..|> ParseStrategy
-    ConservativeStrategy ..|> ParseStrategy
 ```
 
 ### 9.2 文件结构设计
