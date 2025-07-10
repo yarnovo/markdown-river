@@ -37,7 +37,7 @@
         "parsed_content": "**strong**",
         "display_html": "<p><strong>strong</strong></p>\n",
         "strategy_decision": "complete",
-        "reason": "保持加粗格式"
+        "reason": "转换器识别这是未完成的加粗，暂时忽略最后的 *"
       },
       {
         "after_chunk": 4,
