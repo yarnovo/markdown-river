@@ -41,7 +41,6 @@ river.on('content:parsed', ({ html }) => {
 *感谢使用 Markdown River，让 AI 对话体验更流畅！*`;
 
 // DOM 元素
-const strategySelect = document.getElementById('strategy-select');
 const startBtn = document.getElementById('start-btn');
 const resetBtn = document.getElementById('reset-btn');
 const contentDiv = document.getElementById('content');
@@ -51,16 +50,15 @@ const rawHtmlPre = document.getElementById('raw-html');
 // 对比演示元素
 const comparisonInput = document.getElementById('comparison-input');
 const compareBtn = document.getElementById('compare-btn');
-const standardResult = document.getElementById('standard-result');
-const conservativeResult = document.getElementById('conservative-result');
+const parseResult = document.getElementById('parse-result');
 
 let river = null;
 let isStreaming = false;
+let streamingSpeed = 15; // 默认速度 15ms
 
 // 初始化 MarkdownRiver
-function initRiver(strategy = 'standard') {
+function initRiver() {
   river = new MarkdownRiver({
-    strategy,
     markedOptions: {
       breaks: true,
       gfm: true,
@@ -82,8 +80,7 @@ function startStreaming() {
   if (isStreaming) return;
 
   // 初始化
-  const strategy = strategySelect.value;
-  initRiver(strategy);
+  initRiver();
 
   // 清空内容
   contentDiv.innerHTML = '';
@@ -108,7 +105,7 @@ function startStreaming() {
       startBtn.style.display = 'none';
       resetBtn.style.display = 'inline-block';
     }
-  }, 15); // 每 15ms 输出一个字符
+  }, streamingSpeed); // 使用可调节的速度
 }
 
 // 重置
@@ -116,59 +113,60 @@ function reset() {
   window.location.reload();
 }
 
-// 策略对比
-function compareStrategies() {
+// 实时解析
+function parseInput() {
   const input = comparisonInput.value;
   if (!input) return;
 
-  // 标准策略
-  const standardRiver = new MarkdownRiver({
-    strategy: 'standard',
+  const parseRiver = new MarkdownRiver({
     markedOptions: { breaks: true, gfm: true },
   });
 
-  let standardHtml = '';
-  standardRiver.on('content:parsed', ({ html }) => {
-    standardHtml = html;
+  let resultHtml = '';
+  parseRiver.on('content:parsed', ({ html }) => {
+    resultHtml = html;
   });
 
   // 逐字符输入
   for (const char of input) {
-    standardRiver.write(char);
+    parseRiver.write(char);
   }
-  standardRiver.end();
-  standardResult.innerHTML = standardHtml || '<em>（无输出）</em>';
-
-  // 保守策略
-  const conservativeRiver = new MarkdownRiver({
-    strategy: 'conservative',
-    markedOptions: { breaks: true, gfm: true },
-  });
-
-  let conservativeHtml = '';
-  conservativeRiver.on('content:parsed', ({ html }) => {
-    conservativeHtml = html;
-  });
-
-  // 逐字符输入
-  for (const char of input) {
-    conservativeRiver.write(char);
-  }
-  conservativeRiver.end();
-  conservativeResult.innerHTML = conservativeHtml || '<em>（无输出）</em>';
+  parseRiver.end();
+  parseResult.innerHTML = resultHtml || '<em>（无输出）</em>';
 }
 
 // 绑定事件
 startBtn.addEventListener('click', startStreaming);
 resetBtn.addEventListener('click', reset);
-compareBtn.addEventListener('click', compareStrategies);
+compareBtn.addEventListener('click', parseInput);
 
-// 回车触发对比
+// 回车触发解析
 comparisonInput.addEventListener('keypress', e => {
   if (e.key === 'Enter') {
-    compareStrategies();
+    parseInput();
   }
 });
+
+// 速度控制
+const speedSlider = document.getElementById('speed-slider');
+const speedValue = document.getElementById('speed-value');
+
+speedSlider.addEventListener('input', (e) => {
+  streamingSpeed = Number(e.target.value);
+  speedValue.textContent = `${streamingSpeed}ms`;
+});
+
+// 开始时禁用速度控制
+function updateSpeedControl(disabled) {
+  speedSlider.disabled = disabled;
+}
+
+// 修改开始函数以禁用速度控制
+const originalStartStreaming = startStreaming;
+startStreaming = function() {
+  updateSpeedControl(true);
+  originalStartStreaming();
+};
 
 // 设置默认对比文本
 comparisonInput.value = '*Hello* **world**';

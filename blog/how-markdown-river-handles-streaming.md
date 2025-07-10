@@ -185,20 +185,25 @@ function ChatMessage() {
 
 ### 4.3 自定义策略
 
-```javascript
-// 保守策略：更谨慎的歧义判断
-const conservativeStrategy = {
+````javascript
+// 自定义策略：根据需求调整歧义判断
+const customStrategy = {
   hasAmbiguity(content, lastParsedIndex) {
     const unparsed = content.slice(lastParsedIndex);
-    // 任何格式符号都视为歧义
-    return /[*_`\[\]!]/.test(unparsed);
+    // 根据你的需求定制歧义检测逻辑
+    // 例如：只检测代码块的歧义
+    return unparsed.includes('```') && !unparsed.match(/```[\s\S]*```/);
+  },
+  getSafeParseIndex(content, lastParsedIndex) {
+    // 自定义安全解析位置的计算
+    return lastParsedIndex;
   },
 };
 
 const river = new MarkdownRiver({
-  strategy: conservativeStrategy,
+  strategy: customStrategy,
 });
-```
+````
 
 ## 五、设计哲学
 

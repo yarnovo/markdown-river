@@ -1,7 +1,7 @@
 import { CacheManager } from './CacheManager';
 import { MarkdownParser } from './MarkdownParser';
 import { EventEmitter } from '../events/EventEmitter';
-import { StandardStrategy, ConservativeStrategy, ParseStrategy } from '../strategies';
+import { StandardStrategy, ParseStrategy } from '../strategies';
 import { MarkdownRiverOptions } from '../types';
 import { EventMap } from '../events/types';
 
@@ -17,12 +17,7 @@ export class MarkdownRiver {
     this.parser = new MarkdownParser(options.markedOptions);
 
     // 初始化策略
-    if (typeof options.strategy === 'string') {
-      this.strategy =
-        options.strategy === 'conservative' ? new ConservativeStrategy() : new StandardStrategy();
-    } else {
-      this.strategy = options.strategy || new StandardStrategy();
-    }
+    this.strategy = options.strategy || new StandardStrategy();
   }
 
   write(chunk: string): void {

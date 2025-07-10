@@ -3,7 +3,7 @@ import { MarkedOptions } from 'marked';
 export type StreamState = 'idle' | 'streaming' | 'ended';
 
 export interface MarkdownRiverOptions {
-  strategy?: ParseStrategy | 'standard' | 'conservative';
+  strategy?: ParseStrategy;
   markedOptions?: MarkedOptions;
 }
 

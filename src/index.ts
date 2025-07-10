@@ -2,7 +2,7 @@
 export { MarkdownRiver } from './core/MarkdownRiver';
 
 // 策略
-export { StandardStrategy, ConservativeStrategy } from './strategies';
+export { StandardStrategy } from './strategies';
 export type { ParseStrategy } from './strategies';
 
 // React Hook

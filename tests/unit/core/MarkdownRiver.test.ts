@@ -99,24 +99,6 @@ describe('MarkdownRiver', () => {
     });
   });
 
-  describe('custom strategies', () => {
-    it('should accept conservative strategy', () => {
-      const conservativeRiver = new MarkdownRiver({ strategy: 'conservative' });
-      const handler = vi.fn();
-      conservativeRiver.on('content:parsed', handler);
-
-      // Conservative strategy is more cautious
-      conservativeRiver.write('Hello - ');
-      expect(handler).not.toHaveBeenCalled(); // '-' is considered ambiguous
-
-      conservativeRiver.write('world');
-      conservativeRiver.end();
-
-      expect(handler).toHaveBeenCalled();
-      conservativeRiver.destroy();
-    });
-  });
-
   describe('error handling', () => {
     it('should not write to ended stream', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

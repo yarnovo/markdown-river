@@ -12,11 +12,9 @@
             <h1>Markdown River JavaScript 示例</h1>
             <div class="controls">
                 <label>
-                    策略：
-                    <select id="strategy-select">
-                        <option value="standard">标准策略</option>
-                        <option value="conservative">保守策略</option>
-                    </select>
+                    速度：
+                    <input type="range" id="speed-slider" min="5" max="100" value="15">
+                    <span id="speed-value">15ms</span>
                 </label>
                 <button id="start-btn">开始演示</button>
                 <button id="reset-btn" style="display: none;">重置</button>
@@ -39,19 +37,15 @@
             </div>
 
             <div class="comparison-section">
-                <h2>策略对比演示</h2>
+                <h2>实时解析演示</h2>
                 <div class="comparison-controls">
                     <input type="text" id="comparison-input" placeholder="输入 Markdown 文本，例如：*Hello* **world**">
-                    <button id="compare-btn">对比解析</button>
+                    <button id="compare-btn">解析</button>
                 </div>
                 <div class="comparison-results">
                     <div class="result-item">
-                        <h3>标准策略</h3>
-                        <div id="standard-result" class="result-content"></div>
-                    </div>
-                    <div class="result-item">
-                        <h3>保守策略</h3>
-                        <div id="conservative-result" class="result-content"></div>
+                        <h3>解析结果</h3>
+                        <div id="parse-result" class="result-content"></div>
                     </div>
                 </div>
             </div>

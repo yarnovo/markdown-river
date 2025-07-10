@@ -44,9 +44,8 @@ river.on('content:parsed', ({ html }) => {
 
 function App() {
   const [isStreaming, setIsStreaming] = useState(false);
-  const [strategy, setStrategy] = useState('standard');
+  const [speed, setSpeed] = useState(15); // 默认 15ms
   const { write, end, content, rawHtml } = useMarkdownRiver({
-    strategy,
     markedOptions: {
       breaks: true,
       gfm: true,
@@ -67,7 +66,7 @@ function App() {
         end();
         setIsStreaming(false);
       }
-    }, 15); // 每 15ms 输出一个字符
+    }, speed); // 使用可调节的速度
   };
 
   // 重置
@@ -81,15 +80,16 @@ function App() {
         <h1>Markdown River React 示例</h1>
         <div className="controls">
           <label>
-            策略：
-            <select
-              value={strategy}
-              onChange={e => setStrategy(e.target.value)}
+            速度：
+            <input
+              type="range"
+              min="5"
+              max="100"
+              value={speed}
+              onChange={e => setSpeed(Number(e.target.value))}
               disabled={isStreaming || content}
-            >
-              <option value="standard">标准策略</option>
-              <option value="conservative">保守策略</option>
-            </select>
+            />
+            <span>{speed}ms</span>
           </label>
           <button onClick={startStreaming} disabled={isStreaming || content}>
             {isStreaming ? '正在输入...' : '开始演示'}

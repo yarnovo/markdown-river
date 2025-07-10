@@ -315,14 +315,14 @@ graph LR
 1. **React + Vite 示例** (`examples/react-vite/`)
    - 使用 `useMarkdownRiver` Hook
    - 展示流式 AI 响应渲染
-   - 支持策略切换（标准/保守）
+   - 支持速度控制（5-100ms）
    - 模拟逐字符输出效果
 
 2. **JavaScript + Parcel 示例** (`examples/js-parcel/`)
    - 原生 JavaScript API 演示
-   - 策略对比功能
+   - 实时解析功能
    - 交互式 Markdown 输入测试
-   - 展示两种策略的解析差异
+   - 支持速度控制（5-100ms）
 
 ### ESLint 配置更新
 
