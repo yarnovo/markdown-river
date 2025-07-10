@@ -5,10 +5,12 @@ import './App.css';
 
 function App() {
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [speed, setSpeed] = useState(15); // 默认 15ms
   const [selectedCase, setSelectedCase] = useState('完整文档');
   const [currentCase, setCurrentCase] = useState('');
   const [streamInterval, setStreamInterval] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0); // 当前输入位置
   const { write, end, reset, content, rawHtml } = useMarkdownRiver({
     markedOptions: {
       breaks: true,
@@ -23,18 +25,27 @@ function App() {
       clearInterval(streamInterval);
     }
 
-    // 重置内容（重新开始时清空之前的内容）
-    reset();
+    // 检查是否是"重新开始"：如果当前正在运行，就是重新开始
+    const isRestart = isStreaming;
+
+    // 重新开始时强制重置，继续时保持状态
+    if (isRestart || !isPaused) {
+      reset();
+      setCurrentCase(selectedCase);
+      setCurrentIndex(0);
+    }
 
     setIsStreaming(true);
-    setCurrentCase(selectedCase);
-    const text = testCases[selectedCase];
-    let index = 0;
+    setIsPaused(false);
+
+    const text = testCases[currentCase || selectedCase];
+    let index = isRestart || !isPaused ? 0 : currentIndex; // 重新开始时从0开始
 
     const interval = setInterval(() => {
       if (index < text.length) {
         write(text[index]);
         index++;
+        setCurrentIndex(index);
       } else {
         clearInterval(interval);
         end();
@@ -46,6 +57,16 @@ function App() {
     setStreamInterval(interval);
   };
 
+  // 暂停流式输入 - 保持当前状态
+  const pauseStreaming = () => {
+    if (streamInterval) {
+      clearInterval(streamInterval);
+      setStreamInterval(null);
+    }
+    setIsStreaming(false);
+    setIsPaused(true);
+  };
+
   // 停止流式输入 - 恢复到初始状态
   const stopStreaming = () => {
     if (streamInterval) {
@@ -53,7 +74,9 @@ function App() {
       setStreamInterval(null);
     }
     setIsStreaming(false);
+    setIsPaused(false);
     setCurrentCase(''); // 清空当前用例显示
+    setCurrentIndex(0); // 重置索引
     reset(); // 清空内容，恢复到初始状态
   };
 
@@ -85,8 +108,11 @@ function App() {
             />
             <span>{speed}ms</span>
           </label>
-          <button onClick={startStreaming}>{isStreaming ? '重新开始' : '开始演示'}</button>
-          {isStreaming && <button onClick={stopStreaming}>停止</button>}
+          <button onClick={startStreaming}>
+            {isStreaming ? '重新开始' : isPaused ? '继续' : '开始演示'}
+          </button>
+          {isStreaming && <button onClick={pauseStreaming}>暂停</button>}
+          {(isStreaming || isPaused) && <button onClick={stopStreaming}>停止</button>}
         </div>
       </header>
 
