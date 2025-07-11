@@ -53,8 +53,9 @@ river.onHtmlUpdate(html => {
 
 // 流式输入 HTML 内容
 river.write('<h1>Hello ');
-river.write('<strong>Wo'); // 不完整标签，不会立即显示
-river.write('rld</strong></h1>'); // 标签完整后显示
+river.write('<stro'); // 不完整标签，不会立即显示
+river.write('ng>Wo'); // 标签补全后显示
+river.write('rld</strong></h1>');
 river.write('<p>This is safe ');
 river.write('streaming!</p>');
 ```
@@ -65,7 +66,7 @@ river.write('streaming!</p>');
 import { MarkdownRiver } from 'markdown-river';
 import { useState, useEffect, useRef } from 'react';
 
-function StreamingChatMessage({ htmlStream }) {
+function StreamingChatMessage({ htmlChunk }) {
   const [html, setHtml] = useState('');
   const riverRef = useRef(new MarkdownRiver());
 
@@ -83,10 +84,10 @@ function StreamingChatMessage({ htmlStream }) {
 
   useEffect(() => {
     // 处理新的 HTML 片段
-    if (htmlStream) {
-      riverRef.current.write(htmlStream);
+    if (htmlChunk) {
+      riverRef.current.write(htmlChunk);
     }
-  }, [htmlStream]);
+  }, [htmlChunk]);
 
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
@@ -108,7 +109,7 @@ new MarkdownRiver();
 
 - `onHtmlUpdate(listener: (html: string) => void): void` - 注册 HTML 更新监听器
 - `offHtmlUpdate(listener: (html: string) => void): void` - 移除监听器
-- `write(chunk: string): void` - 写入 HTML 片段
+- `write(htmlChunk: string): void` - 写入 HTML 片段
 - `reset(): void` - 重置状态，清空所有内容
 - `getStreamHtml(): string` - 获取完整的流式 HTML（包含不完整标签）
 - `getSafeHtml(): string` - 获取安全的 HTML（已过滤不完整标签）
@@ -235,7 +236,7 @@ async function handleAIResponse(stream) {
   });
 
   for await (const chunk of stream) {
-    river.write(chunk.content);
+    river.write(chunk.content); // chunk 是流中的每个数据片段
   }
 }
 ```

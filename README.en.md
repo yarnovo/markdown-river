@@ -53,8 +53,9 @@ river.onHtmlUpdate(html => {
 
 // Stream HTML content
 river.write('<h1>Hello ');
-river.write('<strong>Wo'); // Incomplete tag, won't display immediately
-river.write('rld</strong></h1>'); // Tag complete, displays now
+river.write('<stro'); // Incomplete tag, won't display immediately
+river.write('ng>Wo'); // Tag completes, now displays
+river.write('rld</strong></h1>');
 river.write('<p>This is safe ');
 river.write('streaming!</p>');
 ```
@@ -65,7 +66,7 @@ river.write('streaming!</p>');
 import { MarkdownRiver } from 'markdown-river';
 import { useState, useEffect, useRef } from 'react';
 
-function StreamingChatMessage({ htmlStream }) {
+function StreamingChatMessage({ htmlChunk }) {
   const [html, setHtml] = useState('');
   const riverRef = useRef(new MarkdownRiver());
 
@@ -83,10 +84,10 @@ function StreamingChatMessage({ htmlStream }) {
 
   useEffect(() => {
     // Handle new HTML fragments
-    if (htmlStream) {
-      riverRef.current.write(htmlStream);
+    if (htmlChunk) {
+      riverRef.current.write(htmlChunk);
     }
-  }, [htmlStream]);
+  }, [htmlChunk]);
 
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
@@ -108,7 +109,7 @@ new MarkdownRiver();
 
 - `onHtmlUpdate(listener: (html: string) => void): void` - Register HTML update listener
 - `offHtmlUpdate(listener: (html: string) => void): void` - Remove listener
-- `write(chunk: string): void` - Write HTML fragment
+- `write(htmlChunk: string): void` - Write HTML fragment
 - `reset(): void` - Reset state, clear all content
 - `getStreamHtml(): string` - Get complete streaming HTML (including incomplete tags)
 - `getSafeHtml(): string` - Get safe HTML (filtered incomplete tags)
@@ -235,7 +236,7 @@ async function handleAIResponse(stream) {
   });
 
   for await (const chunk of stream) {
-    river.write(chunk.content);
+    river.write(chunk.content); // chunk is each data fragment from the stream
   }
 }
 ```
