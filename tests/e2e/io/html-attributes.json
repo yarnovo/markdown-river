@@ -1,0 +1,5 @@
+{
+  "description": "跨多次写入的属性处理",
+  "chunks": ["<a href", "=\"https://example.com\">Link</a>"],
+  "expectedOutputs": ["<a href=\"https://example.com\">Link</a>"]
+}

@@ -1,0 +1,15 @@
+{
+  "description": "特殊情况处理：比较运算符 vs 不完整标签",
+  "chunks": [
+    "Price < $50 and ",
+    "<strong>Important</strong> note: x < ",
+    "10 but ",
+    "<em>emphasis</em>"
+  ],
+  "expectedOutputs": [
+    "Price < $50 and ",
+    "Price < $50 and <strong>Important</strong> note: x < ",
+    "Price < $50 and <strong>Important</strong> note: x < 10 but ",
+    "Price < $50 and <strong>Important</strong> note: x < 10 but <em>emphasis</em>"
+  ]
+}

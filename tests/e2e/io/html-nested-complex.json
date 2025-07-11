@@ -1,0 +1,10 @@
+{
+  "description": "复杂嵌套结构的流式输入",
+  "chunks": ["<div>", "<p>Text with <str", "ong>bold</strong></p>", "</div>"],
+  "expectedOutputs": [
+    "<div>",
+    "<div><p>Text with ",
+    "<div><p>Text with <strong>bold</strong></p>",
+    "<div><p>Text with <strong>bold</strong></p></div>"
+  ]
+}

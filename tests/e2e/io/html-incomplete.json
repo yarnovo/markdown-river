@@ -1,0 +1,5 @@
+{
+  "description": "不完整标签的过滤",
+  "chunks": ["Text before <st", "rong>bold</strong> after"],
+  "expectedOutputs": ["Text before ", "Text before <strong>bold</strong> after"]
+}

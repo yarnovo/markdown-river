@@ -1,0 +1,12 @@
+{
+  "description": "基本 HTML 标签流式输入",
+  "chunks": ["<p>", "Hello ", "<strong>", "World", "</strong>", "</p>"],
+  "expectedOutputs": [
+    "<p>",
+    "<p>Hello ",
+    "<p>Hello <strong>",
+    "<p>Hello <strong>World",
+    "<p>Hello <strong>World</strong>",
+    "<p>Hello <strong>World</strong></p>"
+  ]
+}

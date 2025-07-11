@@ -1,0 +1,5 @@
+{
+  "description": "自闭合标签处理",
+  "chunks": ["Line 1<br", "/>Line 2"],
+  "expectedOutputs": ["Line 1", "Line 1<br/>Line 2"]
+}

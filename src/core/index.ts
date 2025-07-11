@@ -1,1 +1,1 @@
-export { MarkdownRiver, type ParseResult } from './MarkdownRiver.js';
+export { MarkdownRiver } from './MarkdownRiver.js';

@@ -1,0 +1,5 @@
+{
+  "description": "单独的 < 符号处理",
+  "chunks": ["a <", " b && b < c"],
+  "expectedOutputs": ["a ", "a < b && b < c"]
+}

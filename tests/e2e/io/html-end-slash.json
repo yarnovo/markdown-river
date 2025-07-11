@@ -1,0 +1,5 @@
+{
+  "description": "末尾 </ 符号处理",
+  "chunks": ["Text </", "p>"],
+  "expectedOutputs": ["Text ", "Text </p>"]
+}

@@ -1,0 +1,5 @@
+{
+  "description": "HTML 实体处理",
+  "chunks": ["&lt;tag&gt; &amp;", " &copy; 2024"],
+  "expectedOutputs": ["&lt;tag&gt; &amp;", "&lt;tag&gt; &amp; &copy; 2024"]
+}

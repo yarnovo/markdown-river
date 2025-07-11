@@ -1,0 +1,21 @@
+{
+  "description": "长文本流式输入",
+  "chunks": [
+    "<h1>Markdown River</h1>",
+    "<p>这是一个<strong>流式渲染</strong>",
+    "的示例，展示了如何<em>智能地</em>",
+    "输出 HTML 内容。</p>",
+    "<p>它能处理<code>",
+    "if (index < html.length)",
+    "</code>这样的代码。</p>"
+  ],
+  "expectedOutputs": [
+    "<h1>Markdown River</h1>",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>的示例，展示了如何<em>智能地</em>",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>的示例，展示了如何<em>智能地</em>输出 HTML 内容。</p>",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>的示例，展示了如何<em>智能地</em>输出 HTML 内容。</p><p>它能处理<code>",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>的示例，展示了如何<em>智能地</em>输出 HTML 内容。</p><p>它能处理<code>if (index < html.length)",
+    "<h1>Markdown River</h1><p>这是一个<strong>流式渲染</strong>的示例，展示了如何<em>智能地</em>输出 HTML 内容。</p><p>它能处理<code>if (index < html.length)</code>这样的代码。</p>"
+  ]
+}

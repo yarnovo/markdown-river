@@ -1,0 +1,9 @@
+{
+  "description": "不完整标签等待机制（< 和 </ 应该被过滤等待完整标签）",
+  "chunks": ["Text before ", "<", "div>Content</", "div> Text after"],
+  "expectedOutputs": [
+    "Text before ",
+    "Text before <div>Content",
+    "Text before <div>Content</div> Text after"
+  ]
+}

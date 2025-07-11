@@ -1,0 +1,5 @@
+{
+  "description": "比较运算符 < 的处理（应当保留为普通字符）",
+  "chunks": ["The value is ", "a < 5", " and b > 3"],
+  "expectedOutputs": ["The value is ", "The value is a < 5", "The value is a < 5 and b > 3"]
+}

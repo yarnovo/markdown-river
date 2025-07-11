@@ -1,0 +1,10 @@
+{
+  "description": "混合场景：标签和比较符混合",
+  "chunks": ["a < b and c ", "< d then ", "<p>paragraph starts but ", "continues</p> and e < f"],
+  "expectedOutputs": [
+    "a < b and c ",
+    "a < b and c < d then ",
+    "a < b and c < d then <p>paragraph starts but ",
+    "a < b and c < d then <p>paragraph starts but continues</p> and e < f"
+  ]
+}

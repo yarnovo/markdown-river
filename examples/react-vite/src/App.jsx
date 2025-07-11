@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { MarkdownRiver } from '../../../src/core/MarkdownRiver.ts';
 import './App.css';
 
 function App() {
@@ -32,13 +33,6 @@ function App() {
   <li>步骤二：编写代码</li>
   <li>步骤三：测试和部署</li>
 </ol>
-
-<h3>任务列表（GFM 扩展）</h3>
-<ul class="task-list">
-  <li class="task-list-item"><input type="checkbox" checked disabled> 已完成的任务</li>
-  <li class="task-list-item"><input type="checkbox" disabled> 待完成的任务</li>
-  <li class="task-list-item"><input type="checkbox" checked disabled> 另一个已完成任务</li>
-</ul>
 
 <h2>代码块</h2>
 <pre><code class="language-javascript">// JavaScript 代码示例
@@ -134,53 +128,25 @@ for i in range(10):
 <p><small><em>文档结束 - Markdown River 流式渲染演示</em></small></p>
   `.trim();
 
-  const [streamHtml, setStreamHtml] = useState(''); // 原始流式 HTML（可能不完整）
-  const [safeHtml, setSafeHtml] = useState(''); // 转换后的安全 HTML
-  const [displayHtml, setDisplayHtml] = useState(''); // 最终渲染的 HTML
   const [isStreaming, setIsStreaming] = useState(false);
   const [speed, setSpeed] = useState(5); // 默认 5ms
   const intervalRef = useRef(null);
-  const indexRef = useRef(0);
+  const riverRef = useRef(new MarkdownRiver());
+  const [currentHtml, setCurrentHtml] = useState('');
 
-  // 转换函数：过滤掉末尾不完整的标签
-  const convertToSafeHtml = html => {
-    if (!html) return '';
-
-    // 检查是否在代码块中
-    const isInCodeBlock = html => {
-      // 统计 <code> 和 </code> 标签的数量
-      const codeOpens = (html.match(/<code[^>]*>/g) || []).length;
-      const codeCloses = (html.match(/<\/code>/g) || []).length;
-      // 如果开启标签比关闭标签多，说明在代码块中
-      return codeOpens > codeCloses;
+  // 设置 HTML 更新监听器
+  useEffect(() => {
+    const river = riverRef.current;
+    const handleHtmlUpdate = html => {
+      setCurrentHtml(html);
     };
 
-    // 从末尾向前查找最后一个 < 符号
-    let lastOpenBracket = html.lastIndexOf('<');
+    river.onHtmlUpdate(handleHtmlUpdate);
 
-    // 如果没有 < 符号，整个内容都是安全的
-    if (lastOpenBracket === -1) {
-      return html;
-    }
-
-    // 检查这个 < 是否在代码块中
-    const beforeLastBracket = html.substring(0, lastOpenBracket);
-    if (isInCodeBlock(beforeLastBracket)) {
-      // 在代码块中，< 是普通字符，不需要处理
-      return html;
-    }
-
-    // 检查这个 < 后面是否有对应的 >
-    let hasClosingBracket = html.indexOf('>', lastOpenBracket) !== -1;
-
-    // 如果有闭合的 >，说明标签是完整的
-    if (hasClosingBracket) {
-      return html;
-    }
-
-    // 如果没有闭合，需要截断到 < 之前
-    return html.substring(0, lastOpenBracket);
-  };
+    return () => {
+      river.offHtmlUpdate(handleHtmlUpdate);
+    };
+  }, []);
 
   // 开始流式输出
   const startStreaming = () => {
@@ -190,19 +156,17 @@ for i in range(10):
     }
 
     // 重置状态
-    setStreamHtml('');
-    setSafeHtml('');
-    setDisplayHtml('');
-    indexRef.current = 0;
+    riverRef.current.reset();
     setIsStreaming(true);
 
-    // 模拟流式输入 - 逐字符填充 streamHtml
+    // 模拟流式输入 - 逐字符填充
     let streamIndex = 0;
     intervalRef.current = setInterval(() => {
       if (streamIndex < fullHtml.length) {
-        // 逐字符增加到 streamHtml
+        // 逐字符写入到 MarkdownRiver
+        const nextChar = fullHtml[streamIndex];
+        riverRef.current.write(nextChar);
         streamIndex++;
-        setStreamHtml(fullHtml.slice(0, streamIndex));
       } else {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -210,11 +174,6 @@ for i in range(10):
       }
     }, speed);
   };
-
-  // 监听 safeHtml 变化，直接渲染
-  useEffect(() => {
-    setDisplayHtml(safeHtml);
-  }, [safeHtml]);
 
   // 停止流式输出
   const stopStreaming = () => {
@@ -224,12 +183,6 @@ for i in range(10):
     }
     setIsStreaming(false);
   };
-
-  // 监听 streamHtml 变化，自动转换为安全的 HTML
-  useEffect(() => {
-    const safe = convertToSafeHtml(streamHtml);
-    setSafeHtml(safe);
-  }, [streamHtml]);
 
   // 清理定时器
   useEffect(() => {
@@ -258,7 +211,7 @@ for i in range(10):
             <span>{speed}ms</span>
           </label>
           <button onClick={startStreaming} disabled={isStreaming}>
-            {streamHtml ? '重新开始' : '开始演示'}
+            {currentHtml ? '重新开始' : '开始演示'}
           </button>
           {isStreaming && <button onClick={stopStreaming}>停止</button>}
         </div>
@@ -269,7 +222,9 @@ for i in range(10):
         <div style={{ flex: '0 0 25%', minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
             <h3 style={{ margin: 0 }}>原始流式 HTML</h3>
-            <span style={{ fontSize: '14px', color: '#666' }}>{streamHtml.length} 字符</span>
+            <span style={{ fontSize: '14px', color: '#666' }}>
+              {riverRef.current.getStreamHtml().length} 字符
+            </span>
           </div>
           <pre
             style={{
@@ -284,7 +239,7 @@ for i in range(10):
               border: '1px solid #ffeeba',
             }}
           >
-            {streamHtml}
+            {riverRef.current.getStreamHtml()}
           </pre>
         </div>
 
@@ -293,10 +248,12 @@ for i in range(10):
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
             <h3 style={{ margin: 0 }}>安全 HTML</h3>
             <span style={{ fontSize: '14px', color: '#666' }}>
-              {safeHtml.length} 字符
-              {streamHtml.length > safeHtml.length && (
+              {riverRef.current.getSafeHtml().length} 字符
+              {riverRef.current.getStreamHtml().length > riverRef.current.getSafeHtml().length && (
                 <span style={{ color: '#dc3545', marginLeft: '10px' }}>
-                  过滤了 {streamHtml.length - safeHtml.length} 字符
+                  过滤了{' '}
+                  {riverRef.current.getStreamHtml().length - riverRef.current.getSafeHtml().length}{' '}
+                  字符
                 </span>
               )}
             </span>
@@ -314,7 +271,7 @@ for i in range(10):
               border: '1px solid #c3e6cb',
             }}
           >
-            {safeHtml}
+            {riverRef.current.getSafeHtml()}
           </pre>
         </div>
 
@@ -322,7 +279,7 @@ for i in range(10):
         <div style={{ flex: '0 0 50%', minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
             <h3 style={{ margin: 0 }}>渲染效果</h3>
-            <span style={{ fontSize: '14px', color: '#666' }}>{displayHtml.length} 字符</span>
+            <span style={{ fontSize: '14px', color: '#666' }}>{currentHtml.length} 字符</span>
           </div>
           <div
             className="markdown-content"
@@ -332,7 +289,7 @@ for i in range(10):
               borderRadius: '8px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
-            dangerouslySetInnerHTML={{ __html: displayHtml }}
+            dangerouslySetInnerHTML={{ __html: currentHtml }}
           />
         </div>
       </main>
