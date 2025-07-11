@@ -31,6 +31,9 @@ pnpm add markdown-river
 
 **解决方案**：只渲染完整的 HTML 标签，等待不完整标签补全后再显示。
 
+> 💡 **为什么选择 HTML 而不是 Markdown？**  
+> 阅读我们的深度分析：[《为什么在流式场景中选择 HTML 而非 Markdown？》](./blog/why-html-over-markdown-for-streaming.md)
+
 ## 快速开始
 
 ### 基础用法

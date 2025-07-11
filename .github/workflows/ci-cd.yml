@@ -26,7 +26,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --workspaces=false
 
       - name: Run ESLint
         run: npm run lint
@@ -42,26 +42,12 @@ jobs:
 
       - name: Verify build output
         run: |
-          if [ ! -f "dist/bump-version.js" ]; then
+          if [ ! -f "dist/index.js" ]; then
             echo "Build output not found!"
             exit 1
           fi
           echo "Build successful, output verified."
 
-      - name: Test version validation command
-        run: |
-          echo "Testing version validation with valid versions..."
-          node dist/bump-version.js validate 1.0.0
-          node dist/bump-version.js validate 2.1.0-alpha.3
-          node dist/bump-version.js validate 1.0.0-rc.1
-          echo "✅ Version validation tests passed!"
-
-      - name: Validate package.json version
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "Validating package.json version: $PACKAGE_VERSION"
-          node dist/bump-version.js validate "$PACKAGE_VERSION"
-          echo "✅ package.json version is valid!"
 
       # 只在推送标签时验证版本一致性并发布
       - name: Verify tag version matches package.json
@@ -99,11 +85,11 @@ jobs:
 
             ### 📦 Installation
             ```bash
-            npm install -g bumpster@${{ github.ref_name }}
+            npm install markdown-river@${{ github.ref_name }}
             ```
 
             ### 🔗 Links
-            - [npm package](https://www.npmjs.com/package/bumpster)
+            - [npm package](https://www.npmjs.com/package/markdown-river)
             - [Changelog](https://github.com/${{ github.repository }}/compare/previous-tag...${{ github.ref_name }})
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}

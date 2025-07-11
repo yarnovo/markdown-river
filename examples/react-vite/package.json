@@ -9,8 +9,7 @@
     "preview": "vite preview --port 3007"
   },
   "dependencies": {
-    "@markdown-river/test-suite": "0.1.0",
-    "markdown-river": "0.0.0",
+    "markdown-river": "*",
     "normalize.css": "^8.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
