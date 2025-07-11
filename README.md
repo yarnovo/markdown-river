@@ -251,27 +251,6 @@ websocket.onmessage = event => {
 };
 ```
 
-### 服务端渲染场景
-
-```javascript
-// Express.js 流式响应
-app.get('/stream-content', (req, res) => {
-  res.writeHead(200, {
-    'Content-Type': 'text/html',
-    'Transfer-Encoding': 'chunked',
-  });
-
-  const river = new MarkdownRiver();
-
-  river.onHtmlUpdate(html => {
-    res.write(`<div>${html}</div>`);
-  });
-
-  // 分块发送内容
-  sendContentInChunks(river);
-});
-```
-
 ## 性能特点
 
 - **零依赖**：核心代码无外部依赖，打包后体积极小
