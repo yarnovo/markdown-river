@@ -90,12 +90,5 @@
     "*.{json,md}": [
       "prettier --write"
     ]
-  },
-  "dependencies": {
-    "@lezer/common": "^1.2.3",
-    "@lezer/markdown": "^1.4.3",
-    "html-react-parser": "^5.2.5",
-    "marked": "^16.0.0",
-    "mitt": "^3.0.1"
   }
 }

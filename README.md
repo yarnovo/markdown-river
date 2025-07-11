@@ -1,15 +1,15 @@
 # Markdown River
 
-一个专门解决 AI 聊天应用中 Markdown 流式渲染闪烁问题的前端库。通过智能缓冲策略，实现平滑无闪烁的实时 Markdown 渲染效果。
+一个专门为 AI 流式输出设计的 HTML 安全渲染器，解决流式场景中 HTML 标签不完整导致的闪烁问题。
 
 ## 特性
 
-- 🚀 **流式渲染** - 支持逐字符输入，实时显示渲染结果
-- ⚡ **无闪烁体验** - 智能缓冲避免格式符号的视觉跳变
-- 🎯 **简单可靠** - 基于成熟的 marked 库，无需重新造轮子
-- 📦 **轻量级** - 最小化依赖，仅使用 marked + html-react-parser + mitt
-- 🔧 **框架无关** - 通过事件系统解耦，支持任何前端框架
-- ⚛️ **React 优化** - 充分利用 React 的 diff 算法优化渲染
+- 🚀 **HTML 流式渲染** - 专门处理 AI 输出的 HTML 内容，避免不完整标签的闪烁
+- 🛡️ **智能标签过滤** - 智能识别并过滤不完整的 HTML 标签，只渲染安全内容
+- 📏 **精确处理** - 能够区分 HTML 标签和比较运算符（如 `a < b`）
+- 🧠 **代码块感知** - 正确处理代码块中的特殊字符
+- 🔧 **事件驱动** - 简洁的事件 API，框架无关
+- 📦 **零依赖** - 核心实现无任何外部依赖，体积极小
 
 ## 安装
 
@@ -21,32 +21,15 @@ yarn add markdown-river
 pnpm add markdown-river
 ```
 
-## 开发环境设置
+## 核心问题
 
-如果你要开发或测试 Markdown River，请按以下步骤设置：
+在 AI 聊天应用中，后端通常以流式方式输出 HTML 内容。传统的 innerHTML 直接赋值会导致：
 
-```bash
-# 1. 克隆仓库
-git clone https://github.com/yarnovo/markdown-river.git
-cd markdown-river
+- **标签闪烁**：不完整的 HTML 标签（如 `<div` 或 `</pr`）会被显示为文本
+- **内容跳变**：当标签补全时，界面会突然从文本变为 HTML 元素
+- **体验不佳**：用户看到明显的闪烁和跳跃
 
-# 2. 安装依赖
-npm install
-
-# 3. 设置开发环境（使用 npm link）
-npm run dev:setup
-
-# 4. 启动构建监听（可选）
-npm run build:watch
-```
-
-**为什么使用 npm link？**
-
-- 示例项目会实时使用最新的构建结果
-- 无需手动更新 node_modules
-- 避免 `file:../..` 相对路径的缓存问题
-
-详细说明请查看 [开发环境设置文档](./docs/development-setup.md)。
+**解决方案**：只渲染完整的 HTML 标签，等待不完整标签补全后再显示。
 
 ## 快速开始
 
@@ -56,46 +39,51 @@ npm run build:watch
 import { MarkdownRiver } from 'markdown-river';
 
 // 创建渲染器实例
-const river = new MarkdownRiver({
-  bufferTimeout: 50, // 时间阈值（毫秒）
-  bufferSize: 20, // 字符数阈值
-});
+const river = new MarkdownRiver();
 
-// 监听解析完成事件
-river.on('content:parsed', ({ html }) => {
+// 监听 HTML 更新
+river.onHtmlUpdate(html => {
   document.getElementById('output').innerHTML = html;
 });
 
-// 流式输入文本
-river.write('# Hello World\n');
-river.write('This is **streaming** ');
-river.write('Markdown *rendering*!');
-
-// 结束输入
-river.end();
+// 流式输入 HTML 内容
+river.write('<h1>Hello ');
+river.write('<strong>Wo'); // 不完整标签，不会立即显示
+river.write('rld</strong></h1>'); // 标签完整后显示
+river.write('<p>This is safe ');
+river.write('streaming!</p>');
 ```
 
 ### React 集成
 
 ```jsx
-import { useMarkdownRiver } from 'markdown-river/react';
+import { MarkdownRiver } from 'markdown-river';
+import { useState, useEffect, useRef } from 'react';
 
-function ChatMessage() {
-  const { write, end, content } = useMarkdownRiver({
-    bufferTimeout: 50,
-    bufferSize: 20,
-  });
+function StreamingChatMessage({ htmlStream }) {
+  const [html, setHtml] = useState('');
+  const riverRef = useRef(new MarkdownRiver());
 
   useEffect(() => {
-    // 模拟流式输入
-    const chunks = ['# Hello\n', 'This is **bold** and ', '*italic* text.'];
-    chunks.forEach((chunk, i) => {
-      setTimeout(() => write(chunk), i * 100);
-    });
-    setTimeout(() => end(), chunks.length * 100);
+    const river = riverRef.current;
+
+    // 注册监听器
+    river.onHtmlUpdate(setHtml);
+
+    // 清理函数
+    return () => {
+      river.offHtmlUpdate(setHtml);
+    };
   }, []);
 
-  return <div className="markdown-content">{content}</div>;
+  useEffect(() => {
+    // 处理新的 HTML 片段
+    if (htmlStream) {
+      riverRef.current.write(htmlStream);
+    }
+  }, [htmlStream]);
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 ```
 
@@ -103,179 +91,223 @@ function ChatMessage() {
 
 ### MarkdownRiver
 
-主渲染器类，负责缓冲管理和 Markdown 解析。
+主渲染器类，负责 HTML 流处理和安全过滤。
 
 #### 构造函数
 
 ```typescript
-new MarkdownRiver(options?: MarkdownRiverOptions)
+new MarkdownRiver();
 ```
 
-#### 配置选项
+#### 核心方法
 
-| 选项            | 类型            | 默认值 | 描述                 |
-| --------------- | --------------- | ------ | -------------------- |
-| `bufferTimeout` | `number`        | `50`   | 缓冲超时时间（毫秒） |
-| `bufferSize`    | `number`        | `20`   | 缓冲区字符数阈值     |
-| `markedOptions` | `MarkedOptions` | `{}`   | marked 库的配置选项  |
+- `onHtmlUpdate(listener: (html: string) => void): void` - 注册 HTML 更新监听器
+- `offHtmlUpdate(listener: (html: string) => void): void` - 移除监听器
+- `write(chunk: string): void` - 写入 HTML 片段
+- `reset(): void` - 重置状态，清空所有内容
+- `getStreamHtml(): string` - 获取完整的流式 HTML（包含不完整标签）
+- `getSafeHtml(): string` - 获取安全的 HTML（已过滤不完整标签）
 
-#### 方法
-
-- `write(chunk: string): void` - 写入文本块
-- `end(): void` - 结束输入流
-- `on(event: string, handler: Function): void` - 监听事件
-- `off(event: string, handler: Function): void` - 取消监听
-- `destroy(): void` - 销毁实例，清理资源
-
-#### 事件
-
-##### `content:parsed`
-
-当内容解析完成时触发。
+#### 使用示例
 
 ```typescript
-interface ContentParsedEvent {
-  html: string; // 解析后的 HTML
-  timestamp: number; // 时间戳
-  chunkIndex: number; // 第几次解析
-}
+const river = new MarkdownRiver();
+
+// 注册监听器
+river.onHtmlUpdate(safeHtml => {
+  console.log('安全 HTML:', safeHtml);
+});
+
+// 流式写入
+river.write('<p>Hello '); // 输出: '<p>Hello '
+river.write('<strong>Wo'); // 输出: '<p>Hello ' (不完整标签被过滤)
+river.write('rld</strong>'); // 输出: '<p>Hello <strong>World</strong>'
+river.write('!</p>'); // 输出: '<p>Hello <strong>World</strong>!</p>'
 ```
 
-##### `buffer:status`
+## 核心机制
 
-缓冲区状态变化时触发。
+### 智能标签过滤
 
-```typescript
-interface BufferStatusEvent {
-  buffering: boolean; // 是否正在缓冲
-  size: number; // 当前缓冲区大小
-  reason?: 'timeout' | 'size' | 'end'; // 触发原因
-}
+Markdown River 的核心算法会智能分析 HTML 内容：
+
+1. **检测不完整标签**：识别末尾没有闭合的 `<` 标签
+2. **代码块感知**：在 `<pre><code>` 代码块中，`<` 和 `>` 作为普通字符处理
+3. **比较运算符识别**：区分 HTML 标签和比较运算符（如 `a < b`）
+4. **HTML 实体处理**：正确处理 `&lt;` `&gt;` 等转义字符
+
+### 处理示例
+
+```javascript
+// 场景 1：不完整的 HTML 标签
+river.write('<div class="container'); // 等待标签完整
+river.write('">Hello</div>'); // 标签完整，立即显示
+
+// 场景 2：比较运算符
+river.write('价格 < 100 元'); // 立即显示，< 不是标签
+
+// 场景 3：代码块中的字符
+river.write('<pre><code>if (a < b)</code></pre>'); // 代码块中的 < 正常显示
+
+// 场景 4：HTML 实体
+river.write('转义字符：&lt; &gt; &amp;'); // HTML 实体正常显示
 ```
-
-### React Hook: useMarkdownRiver
-
-```typescript
-function useMarkdownRiver(options?: MarkdownRiverOptions): {
-  write: (chunk: string) => void;
-  end: () => void;
-  content: React.ReactNode; // 优化过的 React 组件
-  rawHtml: string; // 原始 HTML 字符串
-};
-```
-
-## 缓冲策略
-
-### 双阈值判断
-
-渲染器使用时间和字符数双重阈值来决定何时触发渲染：
-
-1. **时间阈值**：当距离上次输入超过指定时间（默认 50ms）时触发
-2. **字符数阈值**：当缓冲区累积字符数超过指定数量（默认 20 个）时触发
-
-两个条件满足其一即会触发渲染，确保既有良好的实时性，又能有效避免闪烁。
-
-### 为什么需要缓冲？
-
-在流式渲染场景下，如果逐字符立即渲染，会出现以下问题：
-
-```
-输入: *italic*
-逐字符渲染过程:
-1. * → 显示 "*"
-2. *i → 显示 "*i"
-3. *it → 显示 "*it"
-...
-7. *italic* → 突然变成斜体 "italic"
-```
-
-用户会看到星号先出现后消失的闪烁现象。通过智能缓冲，我们能够：
-
-- 让 marked 一次性识别完整的格式标记
-- 避免中间状态的渲染
-- 保持流畅的输出体验
 
 ## 高级用法
 
-### 自定义 marked 配置
+### 多监听器支持
 
 ```javascript
-const river = new MarkdownRiver({
-  markedOptions: {
-    gfm: true, // GitHub Flavored Markdown
-    breaks: true, // 支持换行
-    highlight: (code, lang) => {
-      // 自定义代码高亮
-      return hljs.highlight(code, { language: lang }).value;
-    },
-  },
+const river = new MarkdownRiver();
+
+// 监听器 1：更新 DOM
+river.onHtmlUpdate(html => {
+  document.getElementById('content').innerHTML = html;
+});
+
+// 监听器 2：统计字符数
+river.onHtmlUpdate(html => {
+  const textLength = html.replace(/<[^>]*>/g, '').length;
+  document.getElementById('counter').textContent = `${textLength} 字符`;
+});
+
+// 监听器 3：自动滚动
+river.onHtmlUpdate(() => {
+  window.scrollTo(0, document.body.scrollHeight);
 });
 ```
 
-### 性能监控
+### 错误处理和调试
 
 ```javascript
-river.on('buffer:status', ({ buffering, size, reason }) => {
-  console.log(`Buffer status: ${buffering ? 'buffering' : 'flushed'}`);
-  console.log(`Buffer size: ${size}`);
-  if (reason) {
-    console.log(`Trigger reason: ${reason}`);
+const river = new MarkdownRiver();
+
+river.onHtmlUpdate(html => {
+  try {
+    // 业务逻辑
+    updateUI(html);
+  } catch (error) {
+    console.error('UI 更新失败:', error);
+    // 其他监听器不受影响
   }
 });
+
+// 调试：对比流式 HTML 和安全 HTML
+console.log('流式 HTML:', river.getStreamHtml());
+console.log('安全 HTML:', river.getSafeHtml());
 ```
 
 ### TypeScript 支持
 
 ```typescript
-import { MarkdownRiver, MarkdownRiverOptions, ContentParsedEvent } from 'markdown-river';
+import { MarkdownRiver } from 'markdown-river';
 
-const options: MarkdownRiverOptions = {
-  bufferTimeout: 30,
-  bufferSize: 15,
+const river = new MarkdownRiver();
+
+// 类型安全的监听器
+const updateHandler = (html: string): void => {
+  document.body.innerHTML = html;
 };
 
-const river = new MarkdownRiver(options);
+river.onHtmlUpdate(updateHandler);
 
-river.on('content:parsed', (event: ContentParsedEvent) => {
-  console.log(`Parsed HTML at ${event.timestamp}`);
+// 确保类型正确
+const safeHtml: string = river.getSafeHtml();
+const streamHtml: string = river.getStreamHtml();
+```
+
+## 实际应用场景
+
+### AI 聊天应用
+
+```javascript
+// 接收 AI 流式响应
+async function handleAIResponse(stream) {
+  const river = new MarkdownRiver();
+
+  river.onHtmlUpdate(html => {
+    updateChatMessage(html);
+  });
+
+  for await (const chunk of stream) {
+    river.write(chunk.content);
+  }
+}
+```
+
+### 实时文档编辑
+
+```javascript
+// WebSocket 实时协作
+websocket.onmessage = event => {
+  const { type, content } = JSON.parse(event.data);
+
+  if (type === 'content-update') {
+    river.write(content);
+  }
+};
+```
+
+### 服务端渲染场景
+
+```javascript
+// Express.js 流式响应
+app.get('/stream-content', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/html',
+    'Transfer-Encoding': 'chunked',
+  });
+
+  const river = new MarkdownRiver();
+
+  river.onHtmlUpdate(html => {
+    res.write(`<div>${html}</div>`);
+  });
+
+  // 分块发送内容
+  sendContentInChunks(river);
 });
 ```
 
-## 浏览器兼容性
+## 性能特点
 
-- Chrome/Edge: 最新两个版本
-- Firefox: 最新两个版本
-- Safari: 最新两个版本
-- 移动端浏览器: iOS Safari 12+, Chrome Android 80+
+- **零依赖**：核心代码无外部依赖，打包后体积极小
+- **高效处理**：只在 HTML 实际变化时触发监听器
+- **内存友好**：最小化缓冲，及时释放不需要的数据
+- **异常隔离**：单个监听器出错不影响其他监听器
 
-## 贡献指南
+## 项目相关
 
-欢迎提交 Issue 和 Pull Request！
+### 在线演示
+
+查看 [在线演示](https://yarnovo.github.io/markdown-river-demo) 体验完整功能。
+
+### 开发和测试
 
 ```bash
 # 克隆项目
-git clone https://github.com/yourusername/markdown-river.git
+git clone https://github.com/yarnovo/markdown-river.git
 cd markdown-river
 
 # 安装依赖
 npm install
 
-# 开发模式
-npm run dev
-
 # 运行测试
 npm test
 
-# 构建
+# 构建项目
 npm run build
+
+# 启动演示
+npm run demo
 ```
 
-## 许可证
+### 许可证
 
 ISC License
 
-## 致谢
+---
 
-- [marked](https://marked.js.org/) - 强大的 Markdown 解析器
-- [html-react-parser](https://github.com/remarkablemark/html-react-parser) - HTML 到 React 的转换器
-- [mitt](https://github.com/developit/mitt) - 轻量级事件发射器
+**为什么叫 "Markdown River"？**
+
+虽然现在专注于 HTML 处理，但项目最初的设计理念是让内容像河流一样流畅地渲染，没有闪烁和跳跃。这个名字体现了项目的核心目标：**流畅的用户体验**。
