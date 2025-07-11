@@ -1,6 +1,6 @@
 {
   "name": "markdown-river",
-  "version": "0.0.0",
+  "version": "0.1.0-dev.0",
   "description": "A high-performance streaming Markdown renderer with incremental parsing",
   "main": "dist/index.js",
   "type": "module",
