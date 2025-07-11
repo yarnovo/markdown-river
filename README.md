@@ -283,7 +283,7 @@ app.get('/stream-content', (req, res) => {
 
 ### 在线演示
 
-查看 [在线演示](https://yarnovo.github.io/markdown-river-demo) 体验完整功能。
+查看 [在线演示](https://yarnovo.github.io/markdown-river) 体验完整功能。
 
 ### 开发和测试
 
