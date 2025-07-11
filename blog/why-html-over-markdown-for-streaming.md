@@ -249,4 +249,4 @@ HTML 流处理比 Markdown 解析：
 
 ---
 
-_想了解更多技术细节？查看 [Markdown River 完整文档](../README.md) 或尝试 [在线演示](https://yarnovo.github.io/markdown-river-demo)。_
+_想了解更多技术细节？查看 [Markdown River 完整文档](../README.md) 或尝试 [在线演示](https://yarnovo.github.io/markdown-river)。_
