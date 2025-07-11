@@ -3,362 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown River - HTML 流式安全渲染演示</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    .header {
-      background: white;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 24px;
-    }
-
-    .header h1 {
-      font-size: 28px;
-      margin-bottom: 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .controls {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .control-group label {
-      font-size: 14px;
-      color: #666;
-    }
-
-    input[type="range"] {
-      width: 120px;
-    }
-
-    button {
-      padding: 8px 20px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    button.primary {
-      background: #667eea;
-      color: white;
-    }
-
-    button.primary:hover {
-      background: #5a5fd8;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-    }
-
-    button.secondary {
-      background: #ef4444;
-      color: white;
-    }
-
-    button.secondary:hover {
-      background: #dc2626;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .speed-display {
-      padding: 4px 12px;
-      background: #f3f4f6;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .demo-selector {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    select {
-      padding: 6px 12px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      font-size: 14px;
-      background: white;
-    }
-
-    .columns {
-      display: grid;
-      grid-template-columns: 1fr 1fr 2fr;
-      gap: 20px;
-      margin-top: 24px;
-    }
-
-    .column {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-
-    .column-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .column-header h3 {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .column-header .stats {
-      font-size: 13px;
-      color: #6b7280;
-    }
-
-    .column-content {
-      padding: 20px;
-      font-size: 14px;
-      line-height: 1.6;
-      max-height: 600px;
-      overflow-y: auto;
-    }
-
-    .column-content pre {
-      white-space: pre-wrap;
-      word-break: break-all;
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-      font-size: 12px;
-    }
-
-    .column.stream {
-      background-color: #fef3c7;
-    }
-
-    .column.stream .column-header {
-      background-color: #fcd34d;
-      border-bottom-color: #fbbf24;
-    }
-
-    .column.safe {
-      background-color: #d1fae5;
-    }
-
-    .column.safe .column-header {
-      background-color: #6ee7b7;
-      border-bottom-color: #34d399;
-    }
-
-    .column.safe .filtered-info {
-      color: #dc2626;
-      font-weight: 500;
-      margin-left: 8px;
-    }
-
-    /* Markdown 内容样式 */
-    .markdown-content {
-      color: #1a202c;
-    }
-
-    .markdown-content h1 {
-      font-size: 2em;
-      margin-bottom: 0.5em;
-      color: #2d3748;
-      border-bottom: 2px solid #e2e8f0;
-      padding-bottom: 0.3em;
-    }
-
-    .markdown-content h2 {
-      font-size: 1.5em;
-      margin-bottom: 0.5em;
-      margin-top: 1em;
-      color: #2d3748;
-    }
-
-    .markdown-content h3 {
-      font-size: 1.25em;
-      margin-bottom: 0.5em;
-      margin-top: 1em;
-      color: #4a5568;
-    }
-
-    .markdown-content p {
-      margin-bottom: 1em;
-    }
-
-    .markdown-content ul, .markdown-content ol {
-      margin-bottom: 1em;
-      padding-left: 2em;
-    }
-
-    .markdown-content li {
-      margin-bottom: 0.25em;
-    }
-
-    .markdown-content code {
-      background: #f7fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 3px;
-      padding: 0.2em 0.4em;
-      font-size: 0.9em;
-      font-family: 'SF Mono', Monaco, Consolas, monospace;
-    }
-
-    .markdown-content pre {
-      background: #2d3748;
-      color: #e2e8f0;
-      padding: 1em;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin-bottom: 1em;
-    }
-
-    .markdown-content pre code {
-      background: none;
-      border: none;
-      padding: 0;
-      color: inherit;
-    }
-
-    .markdown-content blockquote {
-      border-left: 4px solid #cbd5e0;
-      padding-left: 1em;
-      margin-bottom: 1em;
-      color: #4a5568;
-      font-style: italic;
-    }
-
-    .markdown-content a {
-      color: #667eea;
-      text-decoration: none;
-      border-bottom: 1px solid transparent;
-      transition: border-color 0.2s;
-    }
-
-    .markdown-content a:hover {
-      border-bottom-color: #667eea;
-    }
-
-    .markdown-content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin: 1em 0;
-    }
-
-    .markdown-content table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 1em;
-    }
-
-    .markdown-content th, .markdown-content td {
-      border: 1px solid #e2e8f0;
-      padding: 0.5em 1em;
-      text-align: left;
-    }
-
-    .markdown-content th {
-      background: #f7fafc;
-      font-weight: 600;
-    }
-
-    .markdown-content hr {
-      border: none;
-      border-top: 2px solid #e2e8f0;
-      margin: 2em 0;
-    }
-  </style>
+  <title>Markdown River - 流式渲染演示</title>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Markdown River - HTML 流式安全渲染演示</h1>
-      <div class="controls">
-        <div class="demo-selector">
-          <label for="demo-select">选择示例：</label>
-          <select id="demo-select">
-            <option value="complete">完整示例</option>
-            <option value="simple">简单示例</option>
-            <option value="code">代码块示例</option>
-            <option value="comparison">比较运算符示例</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label for="speed-slider">速度：</label>
-          <input type="range" id="speed-slider" min="1" max="50" value="10">
-          <span class="speed-display" id="speed-display">10ms</span>
-        </div>
-        <button class="primary" id="start-btn">开始演示</button>
-        <button class="secondary" id="stop-btn" style="display: none;">停止</button>
+<body class="bg-gray-50">
+  <div class="container mx-auto max-w-4xl px-4 py-10">
+    <!-- Header -->
+    <div class="text-center mb-10">
+      <h1 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
+        Markdown River
+      </h1>
+      <p class="text-gray-600 text-lg">流式 Markdown 渲染演示 - 无闪烁、平滑流畅的打字效果</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-6">
+      <div class="flex items-center gap-3">
+        <label for="demo-select" class="text-sm font-medium text-gray-700">选择示例：</label>
+        <select id="demo-select" class="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer">
+          <option value="welcome">欢迎示例</option>
+          <option value="complete">完整功能</option>
+          <option value="code">代码示例</option>
+          <option value="comparison">比较运算符</option>
+          <option value="table">表格示例</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-3">
+        <label for="speed-slider" class="text-sm font-medium text-gray-700">速度：</label>
+        <input type="range" id="speed-slider" min="5" max="300" value="30" class="w-32">
+        <span id="speed-display" class="px-3 py-1 bg-gray-100 rounded-md text-sm font-medium text-purple-600 min-w-[60px] text-center">30ms</span>
       </div>
     </div>
 
-    <div class="columns">
-      <div class="column stream">
-        <div class="column-header">
-          <h3>原始流式 HTML</h3>
-          <span class="stats" id="stream-stats">0 字符</span>
-        </div>
-        <div class="column-content">
-          <pre id="stream-content"></pre>
-        </div>
-      </div>
-
-      <div class="column safe">
-        <div class="column-header">
-          <h3>安全 HTML</h3>
-          <span class="stats">
-            <span id="safe-stats">0 字符</span>
-            <span class="filtered-info" id="filtered-info"></span>
-          </span>
-        </div>
-        <div class="column-content">
-          <pre id="safe-content"></pre>
-        </div>
-      </div>
-
-      <div class="column render">
-        <div class="column-header">
-          <h3>渲染效果</h3>
-          <span class="stats" id="render-stats">0 字符</span>
-        </div>
-        <div class="column-content markdown-content" id="render-content"></div>
-      </div>
+    <!-- Content -->
+    <div id="content" class="bg-white rounded-xl shadow-lg p-10 min-h-[500px] prose prose-gray max-w-none">
     </div>
   </div>
 

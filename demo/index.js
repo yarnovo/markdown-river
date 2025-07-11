@@ -1,401 +1,208 @@
-// Markdown River Demo
-import { StreamingMarkdownRenderer } from './static/src/streaming-markdown-renderer.js';
+import { MarkdownRiver } from './static/index.js';
 
-// 示例 Markdown 文本
-const sampleMarkdown = `# Markdown River 演示
+// 示例数据
+const demos = {
+  welcome: `<h1>欢迎使用 Markdown River</h1>
+<p>这是一个专为 <strong>AI 流式聊天</strong> 设计的 HTML 渲染器。</p>
+<p>它解决了一个关键问题：<em>不完整标签导致的闪烁</em>。</p>
+<blockquote>
+  <p>当 AI 逐字符返回 HTML 时，传统渲染器会显示不完整的标签，造成闪烁。我们通过智能过滤解决了这个问题。</p>
+</blockquote>
+<p>试试切换不同的示例，感受流畅的打字效果！</p>`,
 
-这是一个**流式 Markdown 渲染器**的演示，专为解决 AI 聊天应用中的格式符号闪烁问题而设计。
+  complete: `<h1>Markdown River 功能演示</h1>
+<p>这个渲染器支持所有常见的 Markdown 转换后的 HTML 格式。</p>
 
-## 核心特性
+<h2>文本格式</h2>
+<p>支持 <strong>加粗文本</strong>、<em>斜体文本</em> 和 <strong><em>组合格式</em></strong>。</p>
+<p>还有 <code>行内代码</code> 和 <a href="https://github.com">链接</a>。</p>
 
-### 1. 防止格式符号闪烁
-当 AI 返回 \`**加粗文本**\` 时，传统渲染器会先显示星号，然后突然变成加粗格式，造成视觉闪烁。
+<h2>列表</h2>
+<h3>无序列表</h3>
+<ul>
+  <li>第一项</li>
+  <li>第二项
+    <ul>
+      <li>嵌套项目</li>
+    </ul>
+  </li>
+  <li>第三项</li>
+</ul>
 
-我们的解决方案: 通过**智能缓冲延迟**获得预判时间, 避免闪烁。
+<h3>有序列表</h3>
+<ol>
+  <li>步骤一</li>
+  <li>步骤二</li>
+  <li>步骤三</li>
+</ol>
 
-### 2. 流式输入支持
-- 支持逐字符输入
-- 支持分块输入
-- 自适应渲染速率
+<hr>
+<p><small>更多功能等你探索...</small></p>`,
 
-### 3. 格式支持
-支持 CommonMark 标准的基础格式:
-- **粗体** 和 *斜体*
-- \`行内代码\`
-- [链接](https://github.com)
-- 有序和无序列表
+  code: `<h1>代码示例</h1>
+<p>Markdown River 能够正确处理代码块中的特殊字符。</p>
 
-#### 代码块示例:
-\`\`\`javascript
-const renderer = new StreamingMarkdownRenderer({
-  container: outputElement,
-  enableMetrics: true,
-  debug: true
+<h2>JavaScript 示例</h2>
+<pre><code>// 流式渲染器使用示例
+const river = new MarkdownRiver();
+
+// 注册监听器
+river.onHtmlUpdate(html => {
+  document.getElementById('output').innerHTML = html;
 });
 
-// 流式输入
-renderer.write('**Bold');
-renderer.write(' text**');
-renderer.end();
-\`\`\`
+// 逐字符写入
+for (let char of htmlContent) {
+  river.write(char);
+}</code></pre>
 
-### 4. 列表展示
+<h2>比较运算符处理</h2>
+<pre><code>// 代码块中的 < 符号被正确保留
+if (index < array.length) {
+  console.log('继续处理...');
+}
 
-**无序列表**:
-- 第一项内容
-- 第二项内容
-  - 嵌套项目
-- 第三项内容
+// 多重比较
+if (a < b && b < c) {
+  console.log('a 是最小值');
+}</code></pre>`,
 
-**有序列表**:
-1. 初始化渲染器
-2. 开始流式输入
-3. 观察渲染效果
-4. 调整输入速度
+  comparison: `<h1>比较运算符的智能识别</h1>
+<p>Markdown River 能够智能区分 HTML 标签和比较运算符。</p>
 
-### 5. 引用和分隔线
+<h2>数学表达式</h2>
+<p>简单比较：a < 5 且 b > 3</p>
+<p>复合条件：x < 10 && y > 20</p>
+<p>价格比较：price < $50.00</p>
 
-> 这是一个引用块
-> 可以包含多行内容
-> 展示引用的渲染效果
+<h2>与 HTML 标签混合</h2>
+<p>这是一个包含 <strong>HTML 标签</strong> 和比较运算符 a < b 的段落。</p>
+<p>注意：即使在流式输入时，< 符号也不会造成渲染问题。</p>`,
 
----
+  table: `<h1>表格示例</h1>
+<p>展示 Markdown 表格转换后的 HTML 渲染效果。</p>
 
-## 性能监控
+<table>
+  <thead>
+    <tr>
+      <th>功能</th>
+      <th>状态</th>
+      <th>说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>流式渲染</td>
+      <td>✅ 支持</td>
+      <td>逐字符平滑渲染</td>
+    </tr>
+    <tr>
+      <td>标签过滤</td>
+      <td>✅ 支持</td>
+      <td>过滤不完整的 HTML 标签</td>
+    </tr>
+    <tr>
+      <td>代码块</td>
+      <td>✅ 支持</td>
+      <td>保留代码中的 < 符号</td>
+    </tr>
+    <tr>
+      <td>性能优化</td>
+      <td>✅ 支持</td>
+      <td>高效的局部分析算法</td>
+    </tr>
+  </tbody>
+</table>`,
+};
 
-渲染器内置了完整的性能监控功能:
-- 实时状态跟踪
-- 字符处理统计
-- 渲染时间监控
-- 错误次数统计
+// 状态
+let river = null;
+let currentDemo = 'welcome';
+let currentIndex = 0;
+let interval = null;
 
-## 使用指南
+// DOM 元素
+const elements = {
+  demoSelect: document.getElementById('demo-select'),
+  speedSlider: document.getElementById('speed-slider'),
+  speedDisplay: document.getElementById('speed-display'),
+  content: document.getElementById('content'),
+};
 
-1. 在左侧输入框中输入 Markdown 文本
-2. 点击"开始流式输入"按钮
-3. 观察右侧的实时渲染效果
-4. 调整输入速度观察不同效果
-5. 查看底部系统日志了解详细信息
+// 初始化
+function init() {
+  // 创建 MarkdownRiver 实例
+  river = new MarkdownRiver();
 
-**试试调整输入速度, 观察在不同速度下的渲染表现!**`;
+  // 注册监听器
+  river.onHtmlUpdate(html => {
+    elements.content.innerHTML = html;
+  });
 
-class DemoApp {
-  constructor() {
-    this.renderer = null;
-    this.streamingInterval = null;
-    this.startTime = 0;
-    this.totalChars = 0;
-    this.errorCount = 0;
+  // 绑定事件
+  elements.demoSelect.addEventListener('change', handleDemoChange);
+  elements.speedSlider.addEventListener('input', updateSpeedDisplay);
 
-    this.initElements();
-    this.bindEvents();
-    this.loadSample();
-    this.log('系统初始化完成', 'success');
+  // 初始化显示
+  updateSpeedDisplay();
+
+  // 自动开始第一个演示
+  startDemo();
+}
+
+// 处理示例切换
+function handleDemoChange() {
+  currentDemo = elements.demoSelect.value;
+  stopDemo();
+  startDemo();
+}
+
+// 更新速度显示
+function updateSpeedDisplay() {
+  const speed = elements.speedSlider.value;
+  elements.speedDisplay.textContent = `${speed}ms`;
+
+  // 如果正在播放，更新定时器以应用新速度
+  if (interval) {
+    clearInterval(interval);
+    const newSpeed = parseInt(speed);
+    startInterval(newSpeed);
   }
+}
 
-  initElements() {
-    // 控制元素
-    this.streamBtn = document.getElementById('streamBtn');
-    this.stopBtn = document.getElementById('stopBtn');
-    this.sampleBtn = document.getElementById('sampleBtn');
-    this.resetBtn = document.getElementById('resetBtn');
-    this.clearInputBtn = document.getElementById('clearInputBtn');
-    this.clearLogsBtn = document.getElementById('clearLogsBtn');
+// 开始演示
+function startDemo() {
+  // 重置状态
+  river.reset();
+  currentIndex = 0;
 
-    // 输入输出
-    this.sourceInput = document.getElementById('sourceInput');
-    this.inputDisplay = document.getElementById('inputDisplay');
-    this.output = document.getElementById('output');
+  const speed = parseInt(elements.speedSlider.value);
+  startInterval(speed);
+}
 
-    // 控制器
-    this.speedInput = document.getElementById('speed');
-    this.speedValue = document.getElementById('speedValue');
-    this.bufferDelayInput = document.getElementById('bufferDelay');
-    this.bufferDelayValue = document.getElementById('bufferDelayValue');
+// 启动定时器
+function startInterval(speed) {
+  const html = demos[currentDemo];
 
-    // 状态显示
-    this.statusIndicator = document.getElementById('statusIndicator');
-    this.statusText = document.getElementById('statusText');
-    this.charCount = document.getElementById('charCount');
-    this.renderTime = document.getElementById('renderTime');
-    this.errorCountEl = document.getElementById('errorCount');
-
-    // 日志
-    this.logs = document.getElementById('logs');
-  }
-
-  bindEvents() {
-    this.streamBtn.addEventListener('click', () => this.startStreaming());
-    this.stopBtn.addEventListener('click', () => this.stopStreaming());
-    this.sampleBtn.addEventListener('click', () => this.loadSample());
-    this.resetBtn.addEventListener('click', () => this.resetDemo());
-    this.clearInputBtn.addEventListener('click', () => this.clearInput());
-    this.clearLogsBtn.addEventListener('click', () => this.clearLogs());
-
-    this.speedInput.addEventListener('input', () => this.updateSpeed());
-    this.bufferDelayInput.addEventListener('input', () => this.updateBufferDelay());
-
-    // 移除实时预览功能，专注于流式演示
-  }
-
-  initRenderer() {
-    if (this.renderer) {
-      this.renderer.reset();
-      this.log('渲染器重置完成', 'info');
+  interval = setInterval(() => {
+    if (currentIndex < html.length) {
+      river.write(html[currentIndex]);
+      currentIndex++;
     } else {
-      // 使用缓冲延迟参数配置渲染器
-      const bufferDelay = parseInt(this.bufferDelayInput.value);
-
-      this.renderer = new StreamingMarkdownRenderer({
-        container: this.output,
-        enableMetrics: true,
-        debug: true,
-        bufferDelay: bufferDelay, // 添加缓冲延迟配置
-      });
-      this.log('渲染器初始化完成, 缓冲延迟: ' + bufferDelay + 'ms', 'success');
+      // 完成后停止
+      clearInterval(interval);
+      interval = null;
     }
+  }, speed);
+}
 
-    // 监听渲染器事件
-    this.renderer.on('render:start', data => {
-      this.updateStatus('rendering', '渲染中');
-      this.startTime = data.startTime;
-      this.log('开始渲染', 'info');
-    });
-
-    this.renderer.on('render:progress', data => {
-      this.totalChars = data.processedChars;
-      this.updateCharCount();
-    });
-
-    this.renderer.on('render:end', data => {
-      this.updateStatus('ended', '已完成');
-      this.updateRenderTime(data.duration);
-      this.log('渲染完成, 耗时: ' + data.duration + 'ms, 字符数: ' + data.totalChars, 'success');
-    });
-
-    this.renderer.on('render:error', data => {
-      this.updateStatus('error', '错误');
-      this.errorCount++;
-      this.updateErrorCount();
-      this.log('渲染错误: ' + data.error.message, 'error');
-    });
-
-    this.renderer.on('render:state:changed', data => {
-      this.log('状态变更: ' + data.previousState + ' -> ' + data.newState, 'info');
-    });
-  }
-
-  startStreaming() {
-    const text = this.sourceInput.value.trim();
-    if (!text) {
-      this.log('输入内容为空, 无法开始流式输入', 'warning');
-      return;
-    }
-
-    this.log('开始流式输入, 内容长度: ' + text.length + ' 字符', 'info');
-    this.initRenderer();
-
-    // 清空显示区域
-    this.inputDisplay.innerHTML = '';
-    this.output.innerHTML = '';
-
-    let inputIndex = 0;
-    const speed = parseInt(this.speedInput.value);
-
-    // 更新按钮状态
-    this.streamBtn.disabled = true;
-    this.stopBtn.disabled = false;
-    this.inputDisplay.classList.add('streaming');
-
-    this.totalChars = 0;
-    this.updateCharCount();
-
-    // 添加光标
-    this.addTypingCursor();
-
-    this.streamingInterval = setInterval(() => {
-      if (inputIndex >= text.length) {
-        this.stopStreaming();
-        return;
-      }
-
-      // 模拟真实的流式输入模式
-      const chunkSize = this.getRandomChunkSize();
-      const chunk = text.slice(inputIndex, inputIndex + chunkSize);
-
-      // 更新输入显示
-      this.updateInputDisplay(text.slice(0, inputIndex + chunkSize));
-
-      // 发送到渲染器
-      this.renderer.write(chunk);
-      this.log(
-        '写入数据: "' + chunk.replace(/\n/g, '\\n') + '" (位置: ' + inputIndex + ')',
-        'info'
-      );
-
-      inputIndex += chunkSize;
-    }, speed);
-  }
-
-  stopStreaming() {
-    if (this.streamingInterval) {
-      clearInterval(this.streamingInterval);
-      this.streamingInterval = null;
-      this.log('流式输入已停止', 'info');
-    }
-
-    // 更新按钮状态
-    this.streamBtn.disabled = false;
-    this.stopBtn.disabled = true;
-    this.inputDisplay.classList.remove('streaming');
-
-    // 移除光标
-    this.removeTypingCursor();
-
-    if (this.renderer) {
-      this.renderer.end();
-      this.log('渲染器结束输入', 'info');
-    }
-  }
-
-  getRandomChunkSize() {
-    // 模拟真实的流式输入: 大部分时候是单字符, 偶尔是多字符
-    const rand = Math.random();
-    if (rand < 0.7) return 1; // 70% 概率单字符
-    if (rand < 0.9) return 2; // 20% 概率两字符
-    return Math.floor(Math.random() * 3) + 3; // 10% 概率 3-5 字符
-  }
-
-  // 新增方法: 添加打字光标
-  addTypingCursor() {
-    const cursor = document.createElement('span');
-    cursor.className = 'typing-cursor';
-    cursor.id = 'typing-cursor';
-    this.inputDisplay.appendChild(cursor);
-  }
-
-  // 新增方法: 移除打字光标
-  removeTypingCursor() {
-    const cursor = document.getElementById('typing-cursor');
-    if (cursor) {
-      cursor.remove();
-    }
-  }
-
-  // 新增方法: 更新输入显示
-  updateInputDisplay(text) {
-    // 移除现有光标
-    this.removeTypingCursor();
-
-    // 设置文本内容
-    this.inputDisplay.textContent = text;
-
-    // 重新添加光标
-    this.addTypingCursor();
-  }
-
-  // 新增方法: 清空输入
-  clearInput() {
-    this.sourceInput.value = '';
-    this.log('输入内容已清空', 'info');
-  }
-
-  // 更新的加载示例方法
-  loadSample() {
-    this.sourceInput.value = sampleMarkdown;
-    this.log('示例内容已加载', 'success');
-  }
-
-  // 更新的重置方法
-  resetDemo() {
-    this.stopStreaming();
-
-    // 清空所有显示区域
-    this.inputDisplay.innerHTML = '';
-    this.output.innerHTML = '';
-
-    if (this.renderer) {
-      this.renderer.reset();
-      this.log('渲染器已重置', 'info');
-    }
-
-    this.totalChars = 0;
-    this.errorCount = 0;
-    this.updateCharCount();
-    this.updateErrorCount();
-    this.updateRenderTime(0);
-    this.updateStatus('idle', '空闲');
-
-    this.log('演示已重置', 'info');
-  }
-
-  updateSpeed() {
-    const speed = this.speedInput.value;
-    this.speedValue.textContent = speed + 'ms';
-
-    if (this.streamingInterval) {
-      this.log('输入速度已更改为: ' + speed + 'ms', 'info');
-      // 重新开始流式输入以应用新速度
-      this.stopStreaming();
-      setTimeout(() => this.startStreaming(), 100);
-    }
-  }
-
-  // 新增方法: 更新缓冲延迟
-  updateBufferDelay() {
-    const delay = this.bufferDelayInput.value;
-    this.bufferDelayValue.textContent = delay + 'ms';
-
-    // 如果渲染器已初始化，更新缓冲延迟配置
-    if (this.renderer) {
-      // 注意: 这里假设渲染器支持动态更新缓冲延迟
-      // 实际实现可能需要根据渲染器的API进行调整
-      this.log('缓冲延迟已更改为: ' + delay + 'ms', 'info');
-    }
-  }
-
-  updateStatus(status, text) {
-    this.statusIndicator.className = 'status-indicator ' + status;
-    this.statusText.textContent = text;
-  }
-
-  updateCharCount() {
-    this.charCount.textContent = this.totalChars;
-  }
-
-  updateRenderTime(time) {
-    this.renderTime.textContent = time + 'ms';
-  }
-
-  updateErrorCount() {
-    this.errorCountEl.textContent = this.errorCount;
-  }
-
-  log(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = document.createElement('div');
-    logEntry.className = 'log-entry ' + type;
-    logEntry.innerHTML = '<span class="log-timestamp">[' + timestamp + ']</span>' + message;
-
-    this.logs.appendChild(logEntry);
-    this.logs.scrollTop = this.logs.scrollHeight;
-
-    // 限制日志数量
-    if (this.logs.children.length > 100) {
-      this.logs.removeChild(this.logs.firstChild);
-    }
-  }
-
-  clearLogs() {
-    this.logs.innerHTML = '';
-    this.log('日志已清空', 'info');
+// 停止演示
+function stopDemo() {
+  if (interval) {
+    clearInterval(interval);
+    interval = null;
   }
 }
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-  window.demoApp = new DemoApp();
-});
-
-// 导出给测试使用
-window.StreamingMarkdownRenderer = StreamingMarkdownRenderer;
+document.addEventListener('DOMContentLoaded', init);
