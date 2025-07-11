@@ -1,5 +1,7 @@
 # Markdown River
 
+**中文** | [English](./README.en.md)
+
 一个专门为 AI 流式输出设计的 HTML 安全渲染器，解决流式场景中 HTML 标签不完整导致的闪烁问题。
 
 ## 特性
