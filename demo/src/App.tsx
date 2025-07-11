@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MarkdownRiver } from 'markdown-river';
 import { PlayIcon, PauseIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { Listbox } from '@headlessui/react';
@@ -9,61 +9,97 @@ const examples = [
   {
     id: 'welcome',
     name: '欢迎示例',
-    content: `<h1>欢迎使用 Markdown River</h1>
-<p>这是一个专为 <strong>AI 流式聊天</strong> 设计的 HTML 渲染器。</p>
-<p>它能够：</p>
+    content: `<h1>🌊 欢迎使用 Markdown River</h1>
+<p>一个专为 <strong>AI 流式输出</strong> 设计的 HTML 渲染器，确保内容的安全和完整显示。</p>
+
+<h2>✨ 核心特性</h2>
 <ul>
-  <li>✨ 完美处理流式输出，无闪烁</li>
-  <li>🚀 支持 CommonMark 规范</li>
-  <li>💪 处理不完整的 HTML 标签</li>
+  <li>🔄 实时流式渲染，无闪烁</li>
+  <li>🚀 完整支持 CommonMark 规范及扩展</li>
+  <li>🔀 支持 HTML 转义字符（&lt; &gt; &amp; 等）</li>
+  <li>📝 支持代码块中的特殊字符处理</li>
   <li>🎯 专注于 AI 场景优化</li>
 </ul>
-<p>选择上方的示例，查看更多功能演示！</p>`
+
+<h2>🎮 如何使用</h2>
+<p>选择上方的示例，体验不同的功能演示</p>
+
+<p><em>💡 提示：调整播放速度，观察流式渲染的实时效果！</em></p>`
   },
   {
     id: 'commonmark',
-    name: 'CommonMark 核心功能',
-    content: `<h1>CommonMark 核心功能</h1>
-<h2>标题层级</h2>
+    name: 'CommonMark 规范',
+    content: `<h1>CommonMark 规范完整演示</h1>
+<p>这是 <strong>CommonMark</strong> 规范的完整功能展示，包含所有核心语法元素。</p>
+
+<h2>标题（Headings）</h2>
+<h1>一级标题</h1>
+<h2>二级标题</h2>
 <h3>三级标题</h3>
 <h4>四级标题</h4>
 <h5>五级标题</h5>
 <h6>六级标题</h6>
 
-<h2>段落和换行</h2>
+<h2>段落和换行（Paragraphs and Line Breaks）</h2>
 <p>这是第一个段落。段落之间通过空行分隔。</p>
 <p>这是第二个段落。<br>
-这里使用了换行符。</p>
+这里使用了硬换行符。</p>
 
-<h2>文本格式化</h2>
+<h2>文本格式化（Text Formatting）</h2>
 <p>支持 <strong>加粗文本</strong>、<em>斜体文本</em>、<strong><em>加粗斜体</em></strong>。</p>
+<p>还支持 <code>行内代码</code> 和普通文本。</p>
 
-<h2>链接</h2>
-<p>这是一个 <a href="https://github.com">普通链接</a>。</p>
+<h2>链接（Links）</h2>
+<p>这是一个 <a href="https://commonmark.org">CommonMark 规范</a> 的链接。</p>
 <p>这是一个 <a href="https://example.com" title="示例网站">带标题的链接</a>。</p>
 
-<h2>引用块</h2>
+<h2>图片（Images）</h2>
+<p><img src="https://picsum.photos/400/200" alt="随机图片" title="来自 Lorem Picsum"></p>
+
+<h2>引用块（Blockquotes）</h2>
 <blockquote>
-  <p>这是一个引用块。</p>
-  <p>引用块可以包含多个段落。</p>
+  <p>这是一个引用块。引用块可以包含多个段落。</p>
+  <p>引用块也支持 <strong>格式化</strong> 和 <code>代码</code>。</p>
   <blockquote>
-    <p>甚至可以嵌套引用。</p>
+    <p>嵌套引用也是支持的。</p>
   </blockquote>
 </blockquote>
 
-<h2>分隔线</h2>
-<p>下面是分隔线：</p>
-<hr>
-<p>分隔线上方和下方的内容。</p>`
-  },
-  {
-    id: 'code',
-    name: '代码块演示',
-    content: `<h1>代码块演示</h1>
-<h2>行内代码</h2>
-<p>在文本中使用 <code>const x = 42;</code> 这样的行内代码。</p>
+<h2>列表（Lists）</h2>
+<h3>无序列表</h3>
+<ul>
+  <li>第一项</li>
+  <li>第二项
+    <ul>
+      <li>嵌套项 2.1</li>
+      <li>嵌套项 2.2</li>
+    </ul>
+  </li>
+  <li>第三项</li>
+</ul>
 
-<h2>围栏代码块</h2>
+<h3>有序列表</h3>
+<ol>
+  <li>步骤一</li>
+  <li>步骤二
+    <ol>
+      <li>子步骤 2.1</li>
+      <li>子步骤 2.2</li>
+    </ol>
+  </li>
+  <li>步骤三</li>
+</ol>
+
+<h2>代码块（Code Blocks）</h2>
+<p>行内代码：<code>const x = 42;</code></p>
+
+<h3>缩进代码块</h3>
+<pre><code>// 这是缩进代码块
+function hello() {
+  console.log('Hello, World!');
+}</code></pre>
+
+<h3>围栏代码块</h3>
 <pre><code class="language-javascript">// JavaScript 示例
 function fibonacci(n) {
   if (n <= 1) return n;
@@ -75,55 +111,44 @@ if (a < b && b < c) {
   console.log('a 是最小值');
 }</code></pre>
 
-<pre><code class="language-python"># Python 示例
-def quicksort(arr):
-    if len(arr) <= 1:
-        return arr
-    pivot = arr[len(arr) // 2]
-    left = [x for x in arr if x < pivot]
-    middle = [x for x in arr if x == pivot]
-    right = [x for x in arr if x > pivot]
-    return quicksort(left) + middle + quicksort(right)</code></pre>
-
 <pre><code class="language-html">&lt;!-- HTML 示例 --&gt;
 &lt;div class="container"&gt;
   &lt;h1&gt;标题&lt;/h1&gt;
   &lt;p&gt;这是一个段落&lt;/p&gt;
-&lt;/div&gt;</code></pre>`
+&lt;/div&gt;</code></pre>
+
+<h2>分隔线（Horizontal Rules）</h2>
+<p>下面是一条分隔线：</p>
+<hr>
+<p>分隔线上方和下方的内容。</p>
+
+<h2>HTML 实体和特殊字符</h2>
+<p>支持 HTML 实体：&copy; &reg; &trade; &hearts; &spades; &clubs; &diams;</p>
+<p>数学比较：a < b, x > y, 5 <= 10, 8 >= 3</p>
+<p>特殊字符：& < > " '</p>
+
+<h2>嵌套结构</h2>
+<ol>
+  <li>有序列表项
+    <ul>
+      <li>嵌套的无序列表</li>
+      <li>包含 <code>代码</code> 的项</li>
+    </ul>
+  </li>
+  <li>引用块在列表中：
+    <blockquote>
+      <p>这是列表中的引用。</p>
+    </blockquote>
+  </li>
+</ol>
+
+<p><small>以上展示了 CommonMark 规范的所有核心语法元素。</small></p>`
   },
   {
-    id: 'comparison',
-    name: '比较运算符',
-    content: `<h1>比较运算符处理</h1>
-<p>Markdown River 能够智能区分 HTML 标签和比较运算符。</p>
-
-<h2>数学比较</h2>
-<p>常见的比较：a < b, x > y, 5 <= 10, 8 >= 3</p>
-<p>价格比较：价格 < 100 元</p>
-<p>复杂表达式：if (x < 10 && y > 20)</p>
-
-<h2>在代码块中</h2>
-<pre><code>// 代码块中的比较运算符
-if (index < array.length) {
-  console.log(array[index]);
-}
-
-// 更复杂的例子
-while (i < n && j < m) {
-  if (arr1[i] < arr2[j]) {
-    result.push(arr1[i++]);
-  }
-}</code></pre>
-
-<h2>混合场景</h2>
-<p>当 <code>a < b</code> 时，执行 <strong>特定操作</strong>。</p>
-<p>HTML 标签 <em>正常工作</em>，而 < 和 > 作为普通字符显示。</p>`
-  },
-  {
-    id: 'table',
-    name: '表格演示',
-    content: `<h1>表格演示</h1>
-<p>Markdown River 支持 GitHub Flavored Markdown 的表格扩展。</p>
+    id: 'tables',
+    name: '表格扩展',
+    content: `<h1>表格扩展（Tables）</h1>
+<p>表格是 GitHub Flavored Markdown 的扩展语法，不属于 CommonMark 规范。</p>
 
 <h2>基础表格</h2>
 <table>
@@ -203,157 +228,204 @@ while (i < n && j < m) {
 </table>`
   },
   {
-    id: 'full',
-    name: '完整功能展示',
-    content: `<h1>Markdown River - 流式 HTML 渲染器</h1>
-<p>这是一个专为 <strong>AI 流式聊天</strong> 设计的 HTML 渲染器，支持 <em>CommonMark</em> 规范及常见扩展。</p>
+    id: 'tasklist',
+    name: '任务列表',
+    content: `<h1>任务列表（Task Lists）</h1>
+<p>任务列表是 GitHub Flavored Markdown 的扩展语法。</p>
 
-<h2>文本格式化</h2>
-<p>支持 <strong>加粗文本</strong>、<em>斜体文本</em>、<strong><em>加粗斜体</em></strong>、<code>行内代码</code> 和 <del>删除线文本</del>。</p>
-<p>还支持 <a href="https://github.com">链接</a> 和 <a href="https://example.com" title="示例网站">带标题的链接</a>。</p>
-
-<h2>段落和换行</h2>
-<p>这是第一个段落。段落之间通过空行分隔。</p>
-<p>这是第二个段落。<br>
-这里使用了换行符。</p>
-
-<h2>引用块</h2>
-<blockquote>
-  <p>这是一个引用块。可以包含多个段落。</p>
-  <p>引用块也支持 <strong>格式化</strong> 和 <code>代码</code>。</p>
-  <blockquote>
-    <p>嵌套引用也是支持的。</p>
-  </blockquote>
-</blockquote>
-
-<h2>列表</h2>
-<h3>无序列表</h3>
-<ul>
-  <li>第一项</li>
-  <li>第二项
-    <ul>
-      <li>嵌套项 2.1</li>
-      <li>嵌套项 2.2</li>
-    </ul>
-  </li>
-  <li>第三项</li>
-</ul>
-
-<h3>有序列表</h3>
-<ol>
-  <li>步骤一</li>
-  <li>步骤二
-    <ol>
-      <li>子步骤 2.1</li>
-      <li>子步骤 2.2</li>
-    </ol>
-  </li>
-  <li>步骤三</li>
-</ol>
-
-<h3>任务列表</h3>
+<h2>基础任务列表</h2>
 <ul>
   <li><input type="checkbox" disabled> 待办事项</li>
   <li><input type="checkbox" checked disabled> 已完成事项</li>
   <li><input type="checkbox" disabled> 另一个待办事项</li>
 </ul>
 
-<h2>代码块</h2>
-<p>行内代码：<code>const x = 42;</code></p>
-<p>围栏代码块：</p>
-<pre><code class="language-javascript">// JavaScript 示例
-function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
-
-// 比较运算符在代码块中正确显示
-if (a < b && b < c) {
-  console.log('a 是最小值');
-}</code></pre>
-
-<pre><code class="language-python"># Python 示例
-def quicksort(arr):
-    if len(arr) <= 1:
-        return arr
-    pivot = arr[len(arr) // 2]
-    left = [x for x in arr if x < pivot]
-    middle = [x for x in arr if x == pivot]
-    right = [x for x in arr if x > pivot]
-    return quicksort(left) + middle + quicksort(right)</code></pre>
-
-<h2>表格</h2>
-<table>
-  <thead>
-    <tr>
-      <th>功能</th>
-      <th align="center">状态</th>
-      <th align="right">版本</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>CommonMark 核心</td>
-      <td align="center">✅ 完全支持</td>
-      <td align="right">1.0</td>
-    </tr>
-    <tr>
-      <td>表格扩展</td>
-      <td align="center">✅ 支持</td>
-      <td align="right">1.0</td>
-    </tr>
-    <tr>
-      <td>任务列表</td>
-      <td align="center">✅ 支持</td>
-      <td align="right">1.0</td>
-    </tr>
-    <tr>
-      <td>删除线</td>
-      <td align="center">✅ 支持</td>
-      <td align="right">1.0</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>分隔线</h2>
-<p>下面是一条分隔线：</p>
-<hr>
-<p>分隔线上方和下方的内容。</p>
-
-<h2>HTML 实体和特殊字符</h2>
-<p>支持 HTML 实体：&copy; &reg; &trade; &hearts; &spades; &clubs; &diams;</p>
-<p>数学比较：a < b, x > y, 5 <= 10, 8 >= 3</p>
-<p>特殊字符：& < > " '</p>
-
-<h2>图片</h2>
-<p><img src="https://picsum.photos/600/300" alt="随机风景图" title="来自 Lorem Picsum 的随机图片"></p>
-
-<h2>嵌套结构</h2>
-<ol>
-  <li>有序列表项
+<h2>嵌套任务列表</h2>
+<ul>
+  <li><input type="checkbox" checked disabled> 完成的主任务
     <ul>
-      <li>嵌套的无序列表</li>
-      <li>包含 <code>代码</code> 的项</li>
+      <li><input type="checkbox" checked disabled> 完成的子任务</li>
+      <li><input type="checkbox" disabled> 未完成的子任务</li>
     </ul>
   </li>
-  <li>引用块在列表中：
-    <blockquote>
-      <p>这是列表中的引用。</p>
-    </blockquote>
+  <li><input type="checkbox" disabled> 未完成的主任务
+    <ul>
+      <li><input type="checkbox" disabled> 子任务 1</li>
+      <li><input type="checkbox" disabled> 子任务 2</li>
+    </ul>
   </li>
-</ol>
+</ul>
 
-<h2>总结</h2>
-<p>Markdown River 通过智能的 <strong>标签完整性检测</strong>，确保流式渲染时不会出现闪烁或布局跳动，为 AI 对话提供流畅的用户体验。</p>
-<p><small>© 2024 Markdown River - 专注于流式渲染的未来</small></p>`
+<h2>任务列表与格式化</h2>
+<ul>
+  <li><input type="checkbox" checked disabled> 支持 <strong>加粗</strong> 和 <em>斜体</em></li>
+  <li><input type="checkbox" disabled> 支持 <code>行内代码</code></li>
+  <li><input type="checkbox" disabled> 支持 <a href="https://example.com">链接</a></li>
+</ul>`
+  },
+  {
+    id: 'strikethrough',
+    name: '删除线',
+    content: `<h1>删除线（Strikethrough）</h1>
+<p>删除线是 GitHub Flavored Markdown 的扩展语法。</p>
+
+<h2>基础删除线</h2>
+<p>这是 <del>被删除的文本</del> 和正常文本。</p>
+
+<h2>删除线与其他格式化</h2>
+<p>可以组合使用：</p>
+<ul>
+  <li><del>删除线</del> 和 <strong>加粗</strong></li>
+  <li><del>删除线</del> 和 <em>斜体</em></li>
+  <li><del>删除线</del> 和 <code>行内代码</code></li>
+  <li><del><strong>删除的加粗文本</strong></del></li>
+  <li><del><em>删除的斜体文本</em></del></li>
+</ul>
+
+<h2>实际应用</h2>
+<p>删除线常用于：</p>
+<ul>
+  <li>显示 <del>旧价格 ¥999</del> 新价格 ¥799</li>
+  <li>标记 <del>已完成</del> 或 <del>已取消</del> 的任务</li>
+  <li>显示 <del>过时的信息</del> 更新的内容</li>
+</ul>`
+  },
+  {
+    id: 'comparison',
+    name: '比较运算符处理',
+    content: `<h1>比较运算符处理</h1>
+<p>Markdown River 的核心特性：智能区分 HTML 标签和比较运算符。</p>
+
+<h2>数学比较</h2>
+<p>常见的比较：a < b, x > y, 5 <= 10, 8 >= 3</p>
+<p>价格比较：价格 < 100 元，优惠 > 50%</p>
+<p>复杂表达式：if (x < 10 && y > 20)</p>
+
+<h2>在代码块中</h2>
+<pre><code>// 代码块中的比较运算符
+if (index < array.length) {
+  console.log(array[index]);
+}
+
+// 更复杂的例子
+while (i < n && j < m) {
+  if (arr1[i] < arr2[j]) {
+    result.push(arr1[i++]);
+  }
+}</code></pre>
+
+<h2>混合场景</h2>
+<p>当 <code>a < b</code> 时，执行 <strong>特定操作</strong>。</p>
+<p>HTML 标签 <em>正常工作</em>，而 < 和 > 作为普通字符显示。</p>
+
+<h2>流式渲染中的挑战</h2>
+<p>在流式输出中，需要智能判断：</p>
+<ul>
+  <li><code>&lt;</code> 是 HTML 标签的开始还是比较运算符</li>
+  <li><code>&gt;</code> 是 HTML 标签的结束还是比较运算符</li>
+  <li>不完整的标签如 <code>&lt;/pr</code> 的处理</li>
+</ul>`
+  },
+  {
+    id: 'html-entities',
+    name: 'HTML 实体/转义字符',
+    content: `<h1>HTML 实体与转义字符处理</h1>
+<p>Markdown River 正确处理各种 HTML 实体和转义字符，确保内容安全显示。</p>
+
+<h2>基础转义字符</h2>
+<p>常见的 HTML 转义字符：</p>
+<ul>
+  <li><code>&amp;lt;</code> → &lt; (小于号)</li>
+  <li><code>&amp;gt;</code> → &gt; (大于号)</li>
+  <li><code>&amp;amp;</code> → &amp; (和号)</li>
+  <li><code>&amp;quot;</code> → &quot; (双引号)</li>
+  <li><code>&amp;apos;</code> → &apos; (单引号)</li>
+</ul>
+
+<h2>特殊符号实体</h2>
+<p>版权和商标符号：</p>
+<ul>
+  <li><code>&amp;copy;</code> → &copy; (版权符号)</li>
+  <li><code>&amp;reg;</code> → &reg; (注册商标)</li>
+  <li><code>&amp;trade;</code> → &trade; (商标符号)</li>
+  <li><code>&amp;nbsp;</code> → &nbsp; (不换行空格)</li>
+</ul>
+
+<h2>数学和特殊字符</h2>
+<p>数学符号：</p>
+<ul>
+  <li><code>&amp;plusmn;</code> → &plusmn; (正负号)</li>
+  <li><code>&amp;times;</code> → &times; (乘号)</li>
+  <li><code>&amp;divide;</code> → &divide; (除号)</li>
+  <li><code>&amp;ne;</code> → &ne; (不等于)</li>
+  <li><code>&amp;le;</code> → &le; (小于等于)</li>
+  <li><code>&amp;ge;</code> → &ge; (大于等于)</li>
+</ul>
+
+<h2>扑克牌花色</h2>
+<p>扑克牌符号：</p>
+<ul>
+  <li><code>&amp;spades;</code> → &spades; (黑桃)</li>
+  <li><code>&amp;clubs;</code> → &clubs; (梅花)</li>
+  <li><code>&amp;hearts;</code> → &hearts; (红心)</li>
+  <li><code>&amp;diams;</code> → &diams; (方块)</li>
+</ul>
+
+<h2>希腊字母</h2>
+<p>常用希腊字母：</p>
+<ul>
+  <li><code>&amp;alpha;</code> → &alpha;</li>
+  <li><code>&amp;beta;</code> → &beta;</li>
+  <li><code>&amp;gamma;</code> → &gamma;</li>
+  <li><code>&amp;delta;</code> → &delta;</li>
+  <li><code>&amp;pi;</code> → &pi;</li>
+  <li><code>&amp;sigma;</code> → &sigma;</li>
+  <li><code>&amp;omega;</code> → &omega;</li>
+</ul>
+
+<h2>代码块中的转义</h2>
+<p>在代码块中，HTML 标签必须转义：</p>
+<pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="zh-CN"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;示例页面&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;欢迎使用 Markdown River&lt;/h1&gt;
+  &lt;p&gt;处理 &amp;lt; 和 &amp;gt; 字符的示例&lt;/p&gt;
+  &lt;script&gt;
+    if (a &lt; b &amp;&amp; b &gt; c) {
+      console.log('比较运算符示例');
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<h2>混合场景</h2>
+<p>在普通文本中，比较运算符无需转义：</p>
+<p>价格对比：原价 &lt; 100 元 &amp; 现价 &gt; 50 元</p>
+<p>而 HTML 标签会被正确解析：<strong>加粗文本</strong> 和 <em>斜体文本</em></p>
+
+<h2>数字字符引用</h2>
+<p>数字形式的字符实体：</p>
+<ul>
+  <li><code>&amp;#60;</code> → &#60; (小于号)</li>
+  <li><code>&amp;#62;</code> → &#62; (大于号)</li>
+  <li><code>&amp;#38;</code> → &#38; (和号)</li>
+  <li><code>&amp;#8364;</code> → &#8364; (欧元符号)</li>
+</ul>
+
+<p><small>💡 Markdown River 能够智能区分需要转义的场景和普通文本场景，确保内容的正确显示。</small></p>`
   }
 ];
 
 function App() {
-  const [speed, setSpeed] = useState(15);
+  const [speed, setSpeed] = useState(10);
   const [isPlaying, setIsPlaying] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
   const [selectedExample, setSelectedExample] = useState(examples[0]);
+  const [isCompleted, setIsCompleted] = useState(false);
   
   const riverRef = useRef<MarkdownRiver | null>(null);
   const intervalRef = useRef<number | null>(null);
@@ -389,10 +461,11 @@ function App() {
         intervalRef.current = null;
       }
       
-      // 重置状态
+      // 重播状态
       riverRef.current.reset();
       currentIndexRef.current = 0;
       setIsPlaying(true);
+      setIsCompleted(false);
 
       const content = selectedExample.content;
       
@@ -408,6 +481,7 @@ function App() {
               intervalRef.current = null;
             }
             setIsPlaying(false);
+            setIsCompleted(true);
           }
         }, speed);
       };
@@ -440,6 +514,7 @@ function App() {
             intervalRef.current = null;
           }
           setIsPlaying(false);
+          setIsCompleted(true);
         }
       }, speed);
     }
@@ -468,6 +543,7 @@ function App() {
             intervalRef.current = null;
           }
           setIsPlaying(false);
+          setIsCompleted(true);
         }
       }, speed);
     }
@@ -559,7 +635,10 @@ function App() {
               {isPlaying ? (
                 <button
                   onClick={pauseDemo}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                  disabled={isCompleted}
+                  className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 ${
+                    isCompleted ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
                   <PauseIcon className="h-5 w-5" />
                   暂停
@@ -567,7 +646,10 @@ function App() {
               ) : (
                 <button
                   onClick={resumeDemo}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                  disabled={isCompleted}
+                  className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 ${
+                    isCompleted ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
                   <PlayIcon className="h-5 w-5" />
                   继续
@@ -578,14 +660,14 @@ function App() {
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 <ArrowPathIcon className="h-5 w-5" />
-                重置
+                重播
               </button>
             </div>
           </div>
 
           {/* 渲染内容 */}
           <div 
-            className="markdown-content prose prose-gray max-w-none"
+            className="prose prose-lg max-w-none"
             dangerouslySetInnerHTML={{ __html: htmlContent }}
           />
         </div>
