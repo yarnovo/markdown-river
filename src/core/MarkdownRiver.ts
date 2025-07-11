@@ -145,14 +145,15 @@ export class MarkdownRiver {
 
   /**
    * 检查当前位置是否在代码块中
+   * 注意：只有 <pre><code> 才是代码块，单独的 <code> 是内联代码
    * @private
    */
   private isInCodeBlock(html: string): boolean {
-    // 统计 <code> 和 </code> 标签的数量
-    const codeOpens = (html.match(/<code[^>]*>/g) || []).length;
-    const codeCloses = (html.match(/<\/code>/g) || []).length;
+    // 统计 <pre> 和 </pre> 标签的数量
+    const preOpens = (html.match(/<pre[^>]*>/g) || []).length;
+    const preCloses = (html.match(/<\/pre>/g) || []).length;
 
-    // 如果开启标签比关闭标签多，说明在代码块中
-    return codeOpens > codeCloses;
+    // 如果开启的 <pre> 标签比关闭的多，说明在代码块中
+    return preOpens > preCloses;
   }
 }

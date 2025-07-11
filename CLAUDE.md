@@ -130,8 +130,9 @@ MarkdownRiver 使用事件驱动架构，适合 AI 流式聊天场景：
 
 ### Demo 架构
 
-- **文件加载路径**：demo 从 `demo/static/` 加载编译后的文件
-- **构建流程**：`npm run build && cp -r dist/* demo/static/`
+- **构建工具**：使用 Parcel 作为构建工具
+- **Workspace 架构**：demo 作为独立的 npm workspace
+- **导入方式**：直接从 'markdown-river' 导入，利用 workspace 链接
 - **自动启动**：页面加载时自动开始流式演示，切换示例也立即开始
 
 ### Demo 功能特性
@@ -143,6 +144,7 @@ MarkdownRiver 使用事件驱动架构，适合 AI 流式聊天场景：
 ### UI 框架选择
 
 - **使用 Tailwind CSS CDN**：通过 `<script src="https://cdn.tailwindcss.com"></script>` 引入
+- **Parcel 开发服务器**：默认端口 1234，支持热更新
 - **样式处理**：使用 `@apply` 指令为 Markdown 元素应用样式
 - **注意事项**：Tailwind 4.0 可能需要额外配置才能正确渲染 Markdown 样式
 
