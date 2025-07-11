@@ -15,8 +15,8 @@
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "dev": "tsx demo/index.ts",
     "copy-dist": "node scripts/copy-dist-to-demo.js",
-    "demo": "npm run build && npm run copy-dist && serve demo -p 3000",
-    "demo:watch": "node scripts/demo-watch.js",
+    "demo": "cd demo && npm run dev",
+    "demo:dev": "cd demo && npm run dev",
     "test": "vitest run --passWithNoTests",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
@@ -42,7 +42,7 @@
   "homepage": "https://github.com/yarnovo/markdown-river#readme",
   "workspaces": [
     "examples/*",
-    "test-suite"
+    "demo"
   ],
   "files": [
     "dist/"

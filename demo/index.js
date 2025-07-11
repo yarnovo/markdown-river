@@ -1,4 +1,4 @@
-import { MarkdownRiver } from './static/index.js';
+import { MarkdownRiver } from 'markdown-river';
 
 // 示例数据
 const demos = {

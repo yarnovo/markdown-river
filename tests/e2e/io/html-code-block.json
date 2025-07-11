@@ -1,11 +1,11 @@
 {
   "description": "代码块中的 < 符号保留",
-  "chunks": ["<code>", "if (index <", " array.length) {", " process(); }", "</code>"],
+  "chunks": ["<pre><code>", "if (index <", " array.length) {", " process(); }", "</code></pre>"],
   "expectedOutputs": [
-    "<code>",
-    "<code>if (index <",
-    "<code>if (index < array.length) {",
-    "<code>if (index < array.length) { process(); }",
-    "<code>if (index < array.length) { process(); }</code>"
+    "<pre><code>",
+    "<pre><code>if (index <",
+    "<pre><code>if (index < array.length) {",
+    "<pre><code>if (index < array.length) { process(); }",
+    "<pre><code>if (index < array.length) { process(); }</code></pre>"
   ]
 }

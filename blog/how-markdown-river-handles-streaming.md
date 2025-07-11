@@ -165,6 +165,54 @@ function convertToSafeHtml(html) {
 - 不会影响已渲染的内容
 - 一旦标签完整，立即释放
 
+### 事件驱动架构：更优雅的 API 设计
+
+Markdown River 采用了事件驱动的 API 设计，这带来了几个重要优势：
+
+**1. 解耦数据流和渲染逻辑**
+
+```javascript
+// 数据流处理
+river.write(chunk);
+
+// 渲染逻辑独立定义
+river.onHtmlUpdate(html => {
+  // 你的渲染逻辑
+});
+```
+
+**2. 智能的变化检测**
+
+只有当安全的 HTML 实际发生变化时才触发监听器。这意味着：
+
+- 减少不必要的渲染
+- 提升性能
+- 避免 React 等框架的无效重渲染
+
+**3. 支持多个监听器**
+
+```javascript
+// 可以同时注册多个监听器
+river.onHtmlUpdate(updateUI);
+river.onHtmlUpdate(saveToCache);
+river.onHtmlUpdate(trackMetrics);
+```
+
+**4. 错误隔离**
+
+单个监听器的错误不会影响其他监听器：
+
+```javascript
+// 即使某个监听器出错，其他监听器仍能正常工作
+river.onHtmlUpdate(() => {
+  throw new Error('出错了！');
+});
+
+river.onHtmlUpdate(() => {
+  console.log('我仍然会执行');
+});
+```
+
 ### 特殊情况：代码块中的 <
 
 代码块中的 `<` 不是标签开始：
@@ -228,11 +276,15 @@ import { MarkdownRiver } from 'markdown-river';
 
 const river = new MarkdownRiver();
 
+// 注册监听器，当安全的 HTML 发生变化时触发
+river.onHtmlUpdate(safeHtml => {
+  container.innerHTML = safeHtml;
+});
+
 // 让你的 AI 输出 HTML
 aiStream.on('data', htmlChunk => {
-  const result = river.write(htmlChunk);
-  // result.html 是安全的、不会闪烁的 HTML
-  container.innerHTML = result.html;
+  // write 方法会自动触发监听器（仅在内容变化时）
+  river.write(htmlChunk);
 });
 ```
 
@@ -240,16 +292,53 @@ aiStream.on('data', htmlChunk => {
 
 ```jsx
 function ChatMessage() {
-  const [streamHtml, setStreamHtml] = useState('');
   const [safeHtml, setSafeHtml] = useState('');
+  const riverRef = useRef(null);
 
   useEffect(() => {
-    const safe = convertToSafeHtml(streamHtml);
-    setSafeHtml(safe);
-  }, [streamHtml]);
+    // 创建 MarkdownRiver 实例
+    riverRef.current = new MarkdownRiver();
+
+    // 注册监听器
+    const handleHtmlUpdate = html => {
+      setSafeHtml(html);
+    };
+
+    riverRef.current.onHtmlUpdate(handleHtmlUpdate);
+
+    // 清理函数
+    return () => {
+      if (riverRef.current) {
+        riverRef.current.offHtmlUpdate(handleHtmlUpdate);
+      }
+    };
+  }, []);
+
+  // 接收流式数据的方法
+  const handleStreamChunk = chunk => {
+    if (riverRef.current) {
+      riverRef.current.write(chunk);
+    }
+  };
 
   return <div dangerouslySetInnerHTML={{ __html: safeHtml }} />;
 }
+```
+
+### 其他有用的 API
+
+```javascript
+// 获取当前的流式 HTML（可能包含不完整标签）
+const streamHtml = river.getStreamHtml();
+
+// 获取当前的安全 HTML（已过滤不完整标签）
+const safeHtml = river.getSafeHtml();
+
+// 重置状态（会触发监听器）
+river.reset();
+
+// 移除监听器
+river.offHtmlUpdate(myListener);
 ```
 
 ### 配置 AI 输出 HTML

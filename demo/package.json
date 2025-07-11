@@ -1,0 +1,15 @@
+{
+  "name": "markdown-river-demo",
+  "version": "1.0.0",
+  "description": "Demo for Markdown River streaming HTML renderer",
+  "scripts": {
+    "dev": "parcel index.html",
+    "clean": "rm -rf dist .parcel-cache"
+  },
+  "devDependencies": {
+    "parcel": "^2.12.0"
+  },
+  "dependencies": {
+    "markdown-river": "*"
+  }
+}
