@@ -1,0 +1,21 @@
+{
+  "description": "测试代码块中包含嵌套的 pre 和 code 标签",
+  "chunks": [
+    "<pre><code>",
+    "// HTML 示例\n",
+    "<pre><code>",
+    "\n  nested code",
+    "\n</code></pre>",
+    "\n// 继续",
+    "</code></pre>"
+  ],
+  "expectedOutputs": [
+    "<pre><code>",
+    "<pre><code>// HTML 示例\n",
+    "<pre><code>// HTML 示例\n<pre><code>",
+    "<pre><code>// HTML 示例\n<pre><code>\n  nested code",
+    "<pre><code>// HTML 示例\n<pre><code>\n  nested code\n</code></pre>",
+    "<pre><code>// HTML 示例\n<pre><code>\n  nested code\n</code></pre>\n// 继续",
+    "<pre><code>// HTML 示例\n<pre><code>\n  nested code\n</code></pre>\n// 继续</code></pre>"
+  ]
+}

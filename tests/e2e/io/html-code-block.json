@@ -3,7 +3,7 @@
   "chunks": ["<pre><code>", "if (index <", " array.length) {", " process(); }", "</code></pre>"],
   "expectedOutputs": [
     "<pre><code>",
-    "<pre><code>if (index <",
+    "<pre><code>if (index ",
     "<pre><code>if (index < array.length) {",
     "<pre><code>if (index < array.length) { process(); }",
     "<pre><code>if (index < array.length) { process(); }</code></pre>"

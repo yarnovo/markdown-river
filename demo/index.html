@@ -3,43 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown River - 流式渲染演示</title>
-  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <title>Markdown River Demo - 流式HTML渲染器</title>
 </head>
-<body class="bg-gray-50">
-  <div class="container mx-auto max-w-4xl px-4 py-10">
-    <!-- Header -->
-    <div class="text-center mb-10">
-      <h1 class="text-4xl font-bold mb-3 bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">
-        Markdown River
-      </h1>
-      <p class="text-gray-600 text-lg">流式 Markdown 渲染演示 - 无闪烁、平滑流畅的打字效果</p>
-    </div>
-
-    <!-- Controls -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-8 flex flex-wrap items-center justify-center gap-6">
-      <div class="flex items-center gap-3">
-        <label for="demo-select" class="text-sm font-medium text-gray-700">选择示例：</label>
-        <select id="demo-select" class="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent cursor-pointer">
-          <option value="welcome">欢迎示例</option>
-          <option value="complete">完整功能</option>
-          <option value="code">代码示例</option>
-          <option value="comparison">比较运算符</option>
-          <option value="table">表格示例</option>
-        </select>
-      </div>
-      <div class="flex items-center gap-3">
-        <label for="speed-slider" class="text-sm font-medium text-gray-700">速度：</label>
-        <input type="range" id="speed-slider" min="5" max="300" value="30" class="w-32">
-        <span id="speed-display" class="px-3 py-1 bg-gray-100 rounded-md text-sm font-medium text-purple-600 min-w-[60px] text-center">30ms</span>
-      </div>
-    </div>
-
-    <!-- Content -->
-    <div id="content" class="bg-white rounded-xl shadow-lg p-10 min-h-[500px] prose prose-gray max-w-none">
-    </div>
-  </div>
-
-  <script type="module" src="./index.js"></script>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/index.tsx"></script>
 </body>
 </html>

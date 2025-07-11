@@ -1,0 +1,36 @@
+{
+  "description": "测试混合的转义字符场景",
+  "chunks": [
+    "<p>",
+    "&",
+    "c",
+    "o",
+    "p",
+    "y",
+    ";",
+    " 2024 ",
+    "&",
+    "amp",
+    ";",
+    " Co. ",
+    "&",
+    "invalid",
+    " text ",
+    "&",
+    "#",
+    "6",
+    "0",
+    ";",
+    "</p>"
+  ],
+  "expectedOutputs": [
+    "<p>",
+    "<p>&copy;",
+    "<p>&copy; 2024 ",
+    "<p>&copy; 2024 &amp;",
+    "<p>&copy; 2024 &amp; Co. ",
+    "<p>&copy; 2024 &amp; Co. &invalid text ",
+    "<p>&copy; 2024 &amp; Co. &invalid text &#60;",
+    "<p>&copy; 2024 &amp; Co. &invalid text &#60;</p>"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "description": "测试代码块中极端嵌套和错误闭合的场景",
+  "chunks": [
+    "<pre><code class=\"language-html\">",
+    "\n// 展示错误的 HTML 示例\n",
+    "<pre><code>\n",
+    "  <pre><code>三层嵌套</code></pre>\n",
+    "  </code>  // 单独的 </code>\n",
+    "  </pre>   // 单独的 </pre>\n",
+    "  </pre></code>  // 错误的闭合顺序\n",
+    "  <",
+    "/",
+    "code>  // 分开的结束标签\n",
+    "  <",
+    "/pre>\n",
+    "这些都不会影响外层代码块",
+    "</code></pre>",
+    "\n<p>代码块已正确结束</p>"
+  ],
+  "expectedOutputs": [
+    "<pre><code class=\"language-html\">",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  ",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n  ",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n  </pre>\n",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n  </pre>\n这些都不会影响外层代码块",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n  </pre>\n这些都不会影响外层代码块</code></pre>",
+    "<pre><code class=\"language-html\">\n// 展示错误的 HTML 示例\n<pre><code>\n  <pre><code>三层嵌套</code></pre>\n  </code>  // 单独的 </code>\n  </pre>   // 单独的 </pre>\n  </pre></code>  // 错误的闭合顺序\n  </code>  // 分开的结束标签\n  </pre>\n这些都不会影响外层代码块</code></pre>\n<p>代码块已正确结束</p>"
+  ]
+}

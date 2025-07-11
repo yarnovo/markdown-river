@@ -96,16 +96,30 @@ export class MarkdownRiver {
   private convertToSafeHtml(html: string): string {
     if (!html) return '';
 
+    // 先检查是否有未完成的 HTML 实体
+    const lastAmpersand = html.lastIndexOf('&');
+    if (lastAmpersand !== -1) {
+      // 检查 & 后面是否有 ;
+      const semicolonAfter = html.indexOf(';', lastAmpersand);
+      if (semicolonAfter === -1) {
+        // 没有找到结束的 ;，可能是未完成的实体
+        const afterAmpersand = html.slice(lastAmpersand + 1);
+
+        // 检查是否可能是有效的实体开始
+        // 有效的实体格式：&name; 或 &#number;
+        if (this.isPossibleEntity(afterAmpersand)) {
+          // 等待更多输入
+          return html.substring(0, lastAmpersand);
+        }
+        // 不是有效的实体格式，作为普通字符处理
+      }
+    }
+
     // 从末尾向前查找最后一个 < 符号
     const lastOpenBracket = html.lastIndexOf('<');
 
     // 如果没有 < 符号，整个内容都是安全的
     if (lastOpenBracket === -1) {
-      return html;
-    }
-
-    // 如果在代码块中，< 是普通字符，不需要处理
-    if (this.isInCodeBlock(html)) {
       return html;
     }
 
@@ -119,6 +133,26 @@ export class MarkdownRiver {
 
     // 获取 < 后面的内容
     const afterBracket = html.slice(lastOpenBracket + 1);
+
+    // 检查 < 符号前的内容是否在代码块中
+    const beforeBracket = html.substring(0, lastOpenBracket);
+    if (this.isInCodeBlock(beforeBracket)) {
+      // 在代码块中，< 默认是普通字符，除非它可能是结束标签的开始
+
+      // 如果 < 在字符串末尾，需要等待下一个字符
+      if (!afterBracket) {
+        return html.substring(0, lastOpenBracket);
+      }
+
+      // 只有当 < 后面跟着 / 或可能的结束标签片段时，才需要特殊处理
+      if (afterBracket.match(/^\/($|c($|o($|d($|e)?)?)?|p($|r($|e)?)?)$/)) {
+        // 可能是 </code> 或 </pre> 的开始，等待更多输入
+        return html.substring(0, lastOpenBracket);
+      }
+
+      // 其他情况下，< 是普通字符，保留它
+      return html;
+    }
 
     // === 例外情况：明确判断不可能是标签的情况 ===
 
@@ -149,11 +183,42 @@ export class MarkdownRiver {
    * @private
    */
   private isInCodeBlock(html: string): boolean {
-    // 统计 <pre> 和 </pre> 标签的数量
-    const preOpens = (html.match(/<pre[^>]*>/g) || []).length;
-    const preCloses = (html.match(/<\/pre>/g) || []).length;
+    // 查找所有的 <pre><code> 组合（代码块开始）
+    const codeBlockStarts = html.match(/<pre[^>]*>\s*<code[^>]*>/g) || [];
 
-    // 如果开启的 <pre> 标签比关闭的多，说明在代码块中
-    return preOpens > preCloses;
+    // 查找所有的 </code></pre> 组合（代码块结束）
+    const codeBlockEnds = html.match(/<\/code>\s*<\/pre>/g) || [];
+
+    // 如果代码块开始的数量大于结束的数量，说明当前在代码块中
+    return codeBlockStarts.length > codeBlockEnds.length;
+  }
+
+  /**
+   * 检查字符串是否可能是有效的 HTML 实体的一部分
+   * @private
+   */
+  private isPossibleEntity(str: string): boolean {
+    // 空字符串，可能是刚输入 &
+    if (!str) return true;
+
+    // 数字实体：&#60; &#x3C; 等
+    if (str.startsWith('#')) {
+      const rest = str.slice(1);
+      if (!rest) return true; // 刚输入 &#
+
+      // 十六进制
+      if (rest.startsWith('x') || rest.startsWith('X')) {
+        const hex = rest.slice(1);
+        if (!hex) return true; // 刚输入 &#x
+        return /^[0-9a-fA-F]+$/.test(hex);
+      }
+
+      // 十进制
+      return /^[0-9]+$/.test(rest);
+    }
+
+    // 命名实体：&lt; &gt; &amp; 等
+    // 只包含字母和数字
+    return /^[a-zA-Z][a-zA-Z0-9]*$/.test(str);
   }
 }

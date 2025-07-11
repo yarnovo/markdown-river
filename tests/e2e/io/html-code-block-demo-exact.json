@@ -1,0 +1,32 @@
+{
+  "description": "测试 demo 中代码块的确切场景 - </code></pre> 的流式输入",
+  "chunks": [
+    "<pre><code class=\"language-javascript\">",
+    "// JavaScript 示例\n",
+    "if (a < b) {\n",
+    "  console.log('test');\n",
+    "}",
+    "<",
+    "/",
+    "c",
+    "o",
+    "d",
+    "e",
+    ">",
+    "<",
+    "/",
+    "p",
+    "r",
+    "e",
+    ">"
+  ],
+  "expectedOutputs": [
+    "<pre><code class=\"language-javascript\">",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\n",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\nif (a < b) {\n",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\nif (a < b) {\n  console.log('test');\n",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\nif (a < b) {\n  console.log('test');\n}",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\nif (a < b) {\n  console.log('test');\n}</code>",
+    "<pre><code class=\"language-javascript\">// JavaScript 示例\nif (a < b) {\n  console.log('test');\n}</code></pre>"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "description": "测试代码块结尾不完整的 </pre> 标签处理",
+  "chunks": [
+    "<pre><code>",
+    "// 这是代码",
+    "\nif (a < b) {",
+    "\n  console.log('a 小于 b');",
+    "\n}",
+    "</",
+    "pr",
+    "e>",
+    "\n<p>代码块后的内容</p>"
+  ],
+  "expectedOutputs": [
+    "<pre><code>",
+    "<pre><code>// 这是代码",
+    "<pre><code>// 这是代码\nif (a < b) {",
+    "<pre><code>// 这是代码\nif (a < b) {\n  console.log('a 小于 b');",
+    "<pre><code>// 这是代码\nif (a < b) {\n  console.log('a 小于 b');\n}",
+    "<pre><code>// 这是代码\nif (a < b) {\n  console.log('a 小于 b');\n}</pre>",
+    "<pre><code>// 这是代码\nif (a < b) {\n  console.log('a 小于 b');\n}</pre>\n<p>代码块后的内容</p>"
+  ]
+}

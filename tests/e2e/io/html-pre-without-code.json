@@ -1,0 +1,12 @@
+{
+  "description": "测试单独的 <pre> 标签不被视为代码块",
+  "chunks": ["<pre>", "这是预格式化文本", "\na < b", "\nx > y", "</", "pre>", "\n<p>后续内容</p>"],
+  "expectedOutputs": [
+    "<pre>",
+    "<pre>这是预格式化文本",
+    "<pre>这是预格式化文本\na < b",
+    "<pre>这是预格式化文本\na < b\nx > y",
+    "<pre>这是预格式化文本\na < b\nx > y</pre>",
+    "<pre>这是预格式化文本\na < b\nx > y</pre>\n<p>后续内容</p>"
+  ]
+}

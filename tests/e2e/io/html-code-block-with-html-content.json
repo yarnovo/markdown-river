@@ -1,0 +1,21 @@
+{
+  "description": "测试代码块中包含 HTML 代码的场景",
+  "chunks": [
+    "<pre><code class=\"language-html\">",
+    "<div>",
+    "\n  <p>Hello</p>",
+    "\n  <code>inline</code>",
+    "\n</div>",
+    "</code></pre>",
+    "\n<p>代码块外的内容</p>"
+  ],
+  "expectedOutputs": [
+    "<pre><code class=\"language-html\">",
+    "<pre><code class=\"language-html\"><div>",
+    "<pre><code class=\"language-html\"><div>\n  <p>Hello</p>",
+    "<pre><code class=\"language-html\"><div>\n  <p>Hello</p>\n  <code>inline</code>",
+    "<pre><code class=\"language-html\"><div>\n  <p>Hello</p>\n  <code>inline</code>\n</div>",
+    "<pre><code class=\"language-html\"><div>\n  <p>Hello</p>\n  <code>inline</code>\n</div></code></pre>",
+    "<pre><code class=\"language-html\"><div>\n  <p>Hello</p>\n  <code>inline</code>\n</div></code></pre>\n<p>代码块外的内容</p>"
+  ]
+}

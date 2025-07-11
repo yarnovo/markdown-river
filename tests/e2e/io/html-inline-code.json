@@ -1,0 +1,11 @@
+{
+  "description": "测试行内代码 <code> 标签中的 < 符号处理",
+  "chunks": ["<p>行内代码：", "<code>", "a < b", "</code>", " 正常文本</p>"],
+  "expectedOutputs": [
+    "<p>行内代码：",
+    "<p>行内代码：<code>",
+    "<p>行内代码：<code>a < b",
+    "<p>行内代码：<code>a < b</code>",
+    "<p>行内代码：<code>a < b</code> 正常文本</p>"
+  ]
+}

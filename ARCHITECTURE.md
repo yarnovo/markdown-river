@@ -2,23 +2,23 @@
 
 ## 1. 系统概述
 
-Markdown River 是一个专注于解决流式 Markdown 渲染闪烁问题的轻量级库。通过智能缓冲策略和成熟的开源组件，提供简单可靠的解决方案。
+Markdown River 是一个专注于安全的 HTML 流式渲染的轻量级库。通过智能过滤不完整的 HTML 标签，确保只渲染完整的内容，避免闪烁问题。
 
 ### 1.1 设计理念
 
-**简单可靠，不重复造轮子**
+**从 Markdown 到 HTML：正确的场景，正确的技术**
 
-- 使用 **marked** 进行 Markdown 解析
-- 使用 **html-react-parser** 优化 React 渲染
-- 使用 **mitt** 实现事件系统
-- 专注于解决缓冲策略这一核心问题
+- **不是** Markdown 解析器，而是 HTML 安全渲染器
+- **专注** 于解决 AI 流式输出场景的标签完整性问题
+- **极简** 的事件驱动 API，易于集成
+- **智能** 的变化检测，避免不必要的渲染
 
 ### 1.2 核心目标
 
-- **消除闪烁**：通过缓冲避免格式符号的显示/隐藏跳变
-- **保持流畅**：双阈值策略确保输出的连续性
-- **简单集成**：最小化 API，易于集成到任何项目
-- **框架无关**：核心库不依赖特定框架
+- **消除闪烁**：通过过滤不完整标签避免内容跳变
+- **保持实时**：只缓冲必要的部分，保证流畅体验
+- **简单集成**：事件驱动 API，支持任何框架
+- **高性能**：只在内容实际变化时触发更新
 
 ## 2. 架构设计
 
@@ -28,633 +28,471 @@ Markdown River 是一个专注于解决流式 Markdown 渲染闪烁问题的轻�
 graph TB
     subgraph "应用层"
         A1[React App]
-        A2[原生 JavaScript]
-        A3[其他框架]
-    end
-
-    subgraph "框架适配层"
-        D1[useMarkdownRiver Hook]
+        A2[Vue App]
+        A3[原生 JavaScript]
+        A4[其他框架]
     end
 
     subgraph "Markdown River 核心"
-        B1[对外 API]
-        B2[缓存管理器]
-        B3[歧义检测策略]
-        B4[Markdown 解析器]
-        B5[事件发射器]
+        B1[事件驱动 API]
+        B2[HTML 流管理]
+        B3[安全转换器]
+        B4[监听器管理]
     end
 
-    subgraph "依赖库"
-        C1[marked]
-        C2[mitt]
-        C3[html-react-parser]
-    end
-
-    A1 --> D1
+    A1 --> B1
     A2 --> B1
     A3 --> B1
-
-    D1 --> B1
-    D1 --> C3
+    A4 --> B1
 
     B1 --> B2
     B2 --> B3
     B3 --> B4
-    B4 --> B5
-
-    B4 --> C1
-    B5 --> C2
+    B4 -->|通知| A1
+    B4 -->|通知| A2
+    B4 -->|通知| A3
+    B4 -->|通知| A4
 ```
 
 ### 2.2 数据流
 
 ```mermaid
 flowchart LR
-    A[字符输入] --> B[追加到缓存]
-    B --> C[策略处理]
-    C -->|返回位置| D[解析到指定位置]
-    C -->|返回字符串| E[解析策略内容]
+    A[HTML 片段输入] --> B[追加到流式 HTML]
+    B --> C[安全转换]
+    C --> D{内容变化?}
+    D -->|是| E[更新安全 HTML]
+    D -->|否| F[保持不变]
+    E --> G[触发监听器]
+    G --> H[UI 更新]
+    F --> I[不触发更新]
 
-    D --> F[marked 解析原内容]
-    E --> G[marked 解析策略内容]
+    J[检测不完整标签] --> K{末尾有 < ?}
+    K -->|是| L{可能是标签?}
+    L -->|是| M[截断到 < 之前]
+    L -->|否| N[保留为普通字符]
+    K -->|否| O[返回完整内容]
 
-    F --> H[生成 HTML]
-    G --> H
-    H --> I[更新解析位置]
-    I --> J[触发事件]
-    J --> K[UI 更新]
-
-    L[检测到未闭合格式] --> M{后面有内容?}
-    M -->|是| N[乐观补全]
-    M -->|否| O[等待更多输入]
-    N --> E
-    O --> P[保持当前位置]
-
-    Q["end() 调用"] --> R[强制解析全部]
-    R --> F
+    P[代码块检测] --> Q{在代码块中?}
+    Q -->|是| R[< 作为普通字符]
+    Q -->|否| S[应用标签检测]
 ```
 
 ### 2.3 核心组件说明
 
-#### 2.3.1 React Hook 适配层
+#### 2.3.1 MarkdownRiver 类
 
-**职责**：为 React 应用提供便捷的集成方式
+**职责**：核心类，管理 HTML 流和监听器
 
-**useMarkdownRiver Hook 特性**：
+**主要方法**：
 
-- 封装了核心 API，提供 React 友好的接口
-- 自动管理生命周期（创建和销毁）
-- 集成 html-react-parser，输出优化的 React 元素
-- 状态管理，自动触发组件重渲染
+- `onHtmlUpdate(listener)` - 注册 HTML 更新监听器
+- `offHtmlUpdate(listener)` - 移除监听器
+- `write(chunk)` - 写入 HTML 片段
+- `reset()` - 重置状态
+- `getStreamHtml()` - 获取原始流式 HTML
+- `getSafeHtml()` - 获取安全 HTML
 
-**提供的接口**：
+**设计特点**：
+
+- 事件驱动架构
+- 只在安全 HTML 变化时触发监听器
+- 支持多个监听器并发
+- 异常隔离机制
+
+#### 2.3.2 安全转换器（convertToSafeHtml）
+
+**职责**：智能过滤不完整的 HTML 标签
+
+**核心逻辑**：
+
+1. 从末尾查找最后一个 `<` 符号
+2. 检查是否有对应的闭合 `>`
+3. 判断是否在代码块中
+4. 识别特殊情况（如比较运算符）
+5. 默认过滤不完整标签
+
+**智能识别**：
+
+```javascript
+// 比较运算符：保留
+"a < 5" → "a < 5"
+
+// 不完整标签：过滤
+"<div" → ""
+"Hello <str" → "Hello "
+
+// 代码块中：保留
+"<pre>if (x < 5)</pre>" → 完整保留
+```
+
+#### 2.3.3 监听器管理
+
+**职责**：管理事件监听器的注册和触发
+
+**特性**：
+
+- 支持多个监听器
+- 异步错误隔离
+- 按注册顺序触发
+- 安全的添加/移除机制
+
+## 3. 核心实现细节
+
+### 3.1 为什么选择 HTML 而非 Markdown
+
+从理论层面分析，Markdown 在流式场景下存在根本性问题：
+
+**Markdown 的歧义性**：
+
+- `*` 可能是：普通字符、斜体标记、加粗标记的一部分
+- 必须看到配对符号才能确定语义
+- 需要回溯和重新渲染
+
+**HTML 的确定性**：
+
+- `<em>` 立即确定是斜体标签
+- 无需等待配对，语义即时确定
+- 只需处理标签完整性问题
+
+### 3.2 安全转换算法
+
+**核心思想**：智能识别并过滤不完整的 HTML 标签
+
+```
+算法流程：
+1. 从末尾查找最后一个 < 符号
+2. 如果没有 < → 全部内容都安全
+3. 如果有对应的 > → 标签完整，内容安全
+4. 如果在代码块中：
+   a. 如果 < 后面是 / → 可能是 </pre> 的开始，截断
+   b. 否则 → < 是普通字符，内容安全
+5. 如果 < 后面不是字母或 / → 不可能是标签，内容安全
+6. 否则 → 推测为不完整标签，截断到 < 之前
+```
+
+### 3.3 特殊情况处理
+
+#### 3.3.1 代码块中的 < 符号
+
+```html
+<pre><code>if (x < 5) { ... }</code></pre>
+```
+
+**代码块检测机制**：
+
+1. 只有 `<pre><code>` 组合才被视为代码块
+2. 单独的 `<pre>` 标签不是代码块（只是预格式化文本）
+3. 单独的 `<code>` 标签是行内代码，不是代码块
+
+检测方法：
+
+- 使用正则表达式匹配 `<pre><code>` 模式
+- 匹配对应的 `</code></pre>` 结束模式
+- 通过比较开始和结束标签的数量和位置判断是否在代码块中
+
+**特殊处理：代码块结束标签的不完整形式**
+
+当流式输出在 `</pre>` 标签中间截断时（如 `</`、`</p`、`</pr`），需要特殊处理：
+
+```javascript
+// 如果在代码块中遇到以 / 开头的不完整标签
+if (isInCodeBlock && afterBracket.match(/^\//)) {
+  // 可能是 </pre> 的开始，应该截断
+  return html.substring(0, lastOpenBracket);
+}
+```
+
+这避免了在代码块结尾显示不完整的闭合标签。
+
+#### 3.3.2 比较运算符识别
+
+```javascript
+// 正则：/^[^a-zA-Z/]/
+"a < 5"     → < 后面是空格，保留
+"x < !"     → < 后面是感叹号，保留
+"<div"      → < 后面是字母，过滤
+"</"        → < 后面是斜杠，过滤
+```
+
+### 3.4 事件驱动的优势
+
+**传统方式**：
+
+```javascript
+const html = river.write(chunk); // 返回值模式
+setContent(html);
+```
+
+**我们的方式**：
+
+```javascript
+river.onHtmlUpdate(html => {
+  // 事件驱动模式
+  setContent(html);
+});
+river.write(chunk);
+```
+
+**优势**：
+
+1. 支持多个监听器
+2. 解耦数据流和渲染逻辑
+3. 只在内容变化时触发
+4. 异常隔离
+
+## 4. API 设计
+
+### 4.1 核心 API
 
 ```typescript
+class MarkdownRiver {
+  // 事件监听
+  onHtmlUpdate(listener: (html: string) => void): void;
+  offHtmlUpdate(listener: (html: string) => void): void;
+
+  // 数据写入
+  write(chunk: string): void;
+
+  // 状态管理
+  reset(): void;
+
+  // 获取内容
+  getStreamHtml(): string; // 原始流式内容
+  getSafeHtml(): string; // 安全渲染内容
+}
+```
+
+### 4.2 使用示例
+
+**基础用法**：
+
+```javascript
+const river = new MarkdownRiver();
+
+// 注册监听器
+river.onHtmlUpdate(html => {
+  container.innerHTML = html;
+});
+
+// 写入流式内容
+stream.on('data', chunk => {
+  river.write(chunk);
+});
+```
+
+**React 集成**：
+
+```jsx
+function StreamingContent() {
+  const [html, setHtml] = useState('');
+  const riverRef = useRef(new MarkdownRiver());
+
+  useEffect(() => {
+    const river = riverRef.current;
+    river.onHtmlUpdate(setHtml);
+
+    return () => {
+      river.offHtmlUpdate(setHtml);
+    };
+  }, []);
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+
+## 5. 性能特性
+
+### 5.1 智能更新机制
+
+```mermaid
+graph LR
+    A[写入 'Hello '] --> B[安全 HTML: 'Hello ']
+    B --> C[触发更新]
+
+    D[写入 '<'] --> E[安全 HTML: 'Hello ']
+    E --> F[无变化，不触发]
+
+    G[写入 '<div>'] --> H[安全 HTML: 'Hello <div>']
+    H --> I[触发更新]
+```
+
+### 5.2 内存效率
+
+- **最小缓冲**：只缓冲可能不完整的标签部分
+- **无冗余存储**：流式 HTML 和安全 HTML 共享大部分内容
+- **即时释放**：标签完整后立即释放缓冲
+
+### 5.3 计算效率
+
+- **O(1) 写入**：追加操作，无需遍历
+- **O(n) 转换**：n 为末尾不完整部分长度，通常很小
+- **局部扫描**：只从最后一个 `<` 开始分析
+
+## 6. 测试体系
+
+### 6.1 E2E 测试架构
+
+```
+tests/e2e/
+├── runner.test.ts      # 测试运行器
+└── io/                 # JSON 驱动的测试用例
+    ├── html-basic.json
+    ├── html-incomplete.json
+    ├── html-code-block.json
+    └── ...
+```
+
+### 6.2 测试用例设计
+
+每个 JSON 文件包含：
+
+```json
 {
-  write: (chunk: string) => void;
-  end: () => void;
-  content: React.ReactNode;  // 解析后的 React 元素
-  rawHtml: string;          // 原始 HTML 字符串
+  "description": "测试描述",
+  "chunks": ["输入", "片段", "序列"],
+  "expectedOutputs": ["期望", "的", "输出", "序列"]
 }
 ```
 
-#### 2.3.2 缓存管理器（Cache Manager）
+### 6.3 测试覆盖
 
-**职责**：管理全量内容缓存和解析位置
+- **基础功能**：完整标签、文本内容
+- **边界情况**：不完整标签、嵌套标签
+- **特殊场景**：代码块、比较运算符
+- **性能测试**：大文本、频繁更新
 
-**核心功能**：
+## 7. 工程实践
 
-- 维护完整的输入历史（全量缓存）
-- 跟踪已解析位置（lastParsedIndex）
-- 提供未解析内容的访问接口
-- 管理流状态（未开始/进行中/已结束）
-
-#### 2.3.3 智能渲染策略（Intelligent Rendering Strategy）
-
-**职责**：基于全量上下文决定下一次渲染的内容和解析位置
-
-**接口设计**：
-
-```typescript
-interface ParseStrategy {
-  /**
-   * 处理内容并返回渲染策略
-   * @param content 完整内容
-   * @param lastParsedIndex 上次解析位置
-   * @returns 安全解析位置（number）或处理后的内容（string）
-   */
-  process(content: string, lastParsedIndex: number): number | string;
-}
-```
-
-**返回值类型**：
-
-- **number**：返回安全解析位置，使用原内容解析到该位置
-- **string**：返回处理后的内容，直接解析该字符串（乐观更新）
-
-**策略特点**：
-
-- 统一的单方法接口，简化调用逻辑
-- 支持乐观更新机制，提供即时反馈
-- 可以访问全量内容，不限于未解析部分
-- 支持内容转换和自动补全功能
-
-#### 2.3.4 Markdown 解析器
-
-**职责**：解析确定无歧义的内容
-
-**特点**：
-
-- 基于 marked 库，功能完整且稳定
-- 每次只解析新增的无歧义部分
-- 支持 GFM（GitHub Flavored Markdown）
-- 可通过配置扩展功能
-
-#### 2.3.5 事件发射器
-
-**职责**：提供轻量级的事件系统
-
-**基于 mitt 实现**：
-
-- 体积小（200 bytes）
-- TypeScript 友好
-- 支持通配符监听
-- 无依赖
-
-## 3. 缓存与解析策略
-
-### 3.1 核心概念定义
-
-| 术语           | 定义                     | 说明                   |
-| -------------- | ------------------------ | ---------------------- |
-| **缓存区**     | 存储全量上下文的区域     | 保存所有输入的累积内容 |
-| **未解析部分** | 新增但尚未解析的内容     | 类似进度条新增的部分   |
-| **已解析部分** | 已经处理并输出的内容     | 已经确定格式的部分     |
-| **歧义状态**   | 当前内容存在多种解释可能 | 需要更多上下文才能确定 |
-| **解析位置**   | 当前已解析内容的结束位置 | 标记解析进度           |
-
-### 3.2 为什么需要缓存？
-
-在流式渲染场景下，逐字符渲染会导致格式符号闪烁：
-
-```
-未缓存的渲染过程：
-字符流: * i t a l i c *
-屏幕显示变化:
-1. "*"         (显示星号)
-2. "*i"        (显示星号和字母)
-3. "*it"       (继续显示)
-...
-7. "*italic*"  (突然识别为斜体，星号消失)
-结果：用户看到星号先出现后消失的闪烁
-```
-
-### 3.3 智能缓存机制
-
-**核心理念**：策略驱动的渲染决策，基于全量上下文决定渲染内容和解析位置，支持乐观更新和即时反馈。
-
-```mermaid
-graph TB
-    A[流状态] --> B[未开始]
-    A --> C[进行中]
-    A --> D[已结束]
-
-    C --> E[新字符到达]
-    E --> F[追加到缓存]
-    F --> G[策略处理]
-
-    G -->|返回位置| H[解析到指定位置]
-    G -->|返回字符串| I[乐观解析策略内容]
-
-    H --> J[更新解析位置]
-    I --> J
-    J --> K[输出新内容]
-    K --> E
-
-    D --> L["end() 调用"]
-    L --> M[强制解析所有内容]
-```
-
-### 3.4 渲染决策策略
-
-**策略工作原理**：
-
-- 基于全量上下文进行智能决策
-- 检测未闭合的行内格式符号
-- 决定返回解析位置或补全内容，实现即时反馈
-
-```mermaid
-graph LR
-    A["输入: *hello"] --> B{检测格式符号}
-    B --> C[发现未闭合 *]
-    C --> D{后面有内容?}
-    D -->|是| E[乐观补全: *hello*]
-    D -->|否| F[等待更多输入]
-
-    E --> G[立即渲染斜体]
-    F --> H[保持当前位置]
-
-    I["输入: *hello*"] --> J[检测完整格式]
-    J --> K[正常解析]
-```
-
-**支持的策略决策场景**：
-
-- 行内代码：`` `code` `` → 策略决定自动补全并返回字符串
-- 斜体/强调：`*text*`、`**text**` → 策略决定补全或返回位置
-- 下划线格式：`_text_`、`__text__` → 策略智能决策处理方式
-- 链接：`[text]()` → 策略决定补全链接语法
-- 列表：`-` 策略决定立即渲染，`- ` 策略决定等待
-
-### 3.5 智能策略接口
-
-```typescript
-interface ParseStrategy {
-  /**
-   * 处理内容并返回渲染策略
-   * @param content 完整内容
-   * @param lastParsedIndex 上次解析位置
-   * @returns 安全解析位置（number）或处理后的内容（string）
-   */
-  process(content: string, lastParsedIndex: number): number | string;
-}
-```
-
-**StandardStrategy 决策流程**：
-
-1. **列表特殊处理**：单独 `-` 决定立即渲染，`- ` 决定智能等待
-2. **未匹配符号检测**：扫描未解析内容，找到第一个未匹配的格式符号
-3. **渲染决策**：
-   - 无未匹配符号 → 决定解析到末尾（返回位置）
-   - 符号前有完整内容 → 决定优先解析完整部分（返回位置）
-   - 符号后有内容 → 决定补全内容（返回字符串）
-   - 符号后无内容 → 决定保持位置等待（返回当前位置）
-4. **内容生成**：根据决策类型生成补全内容或返回解析位置
-
-### 3.6 工作流程示例
-
-#### 3.6.1 策略补全决策场景
-
-```
-初始状态：
-缓存: ""
-已解析: ""
-未解析: ""
-
-输入 "Hello "：
-缓存: "Hello "
-已解析: "Hello "  （无格式符号，立即解析）
-未解析: ""
-
-输入 "*"：
-缓存: "Hello *"
-已解析: "Hello "  （符号后无内容，等待）
-未解析: "*"
-
-输入 "world"：
-缓存: "Hello *world"
-策略决策: "Hello *world*"  （决定补全并返回字符串）
-已解析: "Hello *world*"   （立即显示斜体）
-未解析: ""
-
-输入 "*"：
-缓存: "Hello *world*"
-已解析: "Hello *world*"  （内容未变，保持）
-未解析: ""
-```
-
-#### 3.6.2 策略优先决策场景
-
-```
-输入 "Good *morning* and *"：
-缓存: "Good *morning* and *"
-策略分析: 前面有完整格式 "*morning*"
-策略决策: 17 (决定解析到 "and" 后面，返回位置)
-已解析: "Good *morning* and "
-未解析: "*"  （等待后续输入）
-```
-
-### 3.7 关键参数
-
-- **strategy**: 智能渲染策略 - 决定下一次渲染内容和解析位置
-- **streamState**: 流状态 - 未开始/进行中/已结束
-
-**策略驱动特性**：
-
-- 没有缓冲区大小限制（全量缓存）
-- 策略完全控制渲染时机和内容
-- 智能决策（返回位置 vs 返回补全内容）
-- end() 方法会立即强制解析所有内容
-
-### 3.8 配置示例
-
-策略配置示例：
-
-| 场景     | 策略类型   | 特点                 |
-| -------- | ---------- | -------------------- |
-| AI 对话  | 标准策略   | 平衡各种格式检测     |
-| 代码展示 | 自定义策略 | 可优先检测代码块边界 |
-| 文档预览 | 自定义策略 | 可调整歧义判断规则   |
-
-### 3.9 end() API 行为
-
-当调用 `end()` 方法时：
-
-- 立即消除歧义阻塞
-- 强制解析所有未解析内容
-- 将流状态设置为"已结束"
-- 输出最终的完整内容
-
-## 4. 事件系统
-
-### 4.1 事件类型
-
-```mermaid
-graph TB
-    A[MarkdownRiver] -->|发送| B[content:parsed]
-    A -->|发送| C[buffer:status]
-
-    B --> D[包含解析后的 HTML]
-    B --> E[包含时间戳]
-    B --> F[包含块索引]
-
-    C --> G[缓冲状态]
-    C --> H[缓冲区大小]
-    C --> I[触发原因]
-```
-
-### 4.2 事件流程
-
-1. **content:parsed** - 内容解析完成
-   - 触发时机：缓冲区刷新并完成解析
-   - 包含数据：HTML 内容、时间戳、块索引
-
-2. **buffer:status** - 缓冲区状态变化
-   - 触发时机：开始缓冲或结束缓冲
-   - 包含数据：缓冲状态、当前大小、触发原因
-
-## 5. React 集成优化
-
-### 5.1 渲染优化原理
-
-```mermaid
-graph TB
-    A[HTML 字符串] -->|html-react-parser| B[React 元素树]
-    B --> C[React Reconciliation]
-    C --> D[计算最小更新]
-    D --> E[更新真实 DOM]
-
-    F[直接使用 innerHTML] --> G[销毁所有 DOM]
-    G --> H[重建所有 DOM]
-```
-
-### 5.2 优化效果
-
-使用 html-react-parser 的优势：
-
-- 将 HTML 转换为 React 元素
-- 保持元素的引用稳定性
-- 利用 React 的 diff 算法
-- 只更新真正变化的部分
-
-## 6. 性能考虑
-
-### 6.1 累积解析策略
-
-为确保 Markdown 格式的完整性，解析器采用累积策略：
-
-```mermaid
-graph LR
-    A["第1块: # Hello"] --> B["累积: # Hello"]
-    C["第2块: World"] --> D["累积: # Hello World"]
-    E["第3块: Bold"] --> F["累积: # Hello World\nBold"]
-
-    B --> G[解析结果1]
-    D --> H[解析结果2]
-    F --> I[解析结果3]
-```
-
-这确保了跨块的格式（如跨行的代码块）能够正确解析。
-
-### 6.2 内存管理
-
-系统包含多个内存保护机制：
-
-- 最大内容长度限制（默认 1MB）
-- 定时器自动清理
-- 事件监听器管理
-- 销毁时的资源释放
-
-## 7. 扩展性设计
-
-### 7.1 自定义 marked 配置
-
-通过 `markedOptions` 可以扩展解析功能：
-
-- 自定义渲染器
-- 代码高亮集成
-- 自定义标记扩展
-- 安全性配置
-
-### 7.2 事件扩展
-
-基于 mitt 的事件系统支持：
-
-- 自定义事件类型
-- 事件拦截和转换
-- 批量事件处理
-- 异步事件处理
-
-## 8. 错误处理策略
-
-### 8.1 降级机制
-
-```mermaid
-graph TB
-    A[Markdown 解析] --> B{是否出错?}
-    B -->|否| C[返回 HTML]
-    B -->|是| D[记录错误]
-    D --> E[降级为纯文本]
-    E --> F[包装为 pre 标签]
-    F --> G[返回安全 HTML]
-```
-
-### 8.2 边界保护
-
-- 输入验证：检查输入类型和长度
-- 解析保护：捕获 marked 异常
-- 事件保护：隔离监听器错误
-- 资源保护：防止内存泄漏
-
-## 9. 类设计与关系
-
-### 9.1 核心类图
-
-```mermaid
-classDiagram
-    class MarkdownRiver {
-        -cacheManager: CacheManager
-        -strategy: ParseStrategy
-        -parser: MarkdownParser
-        -eventEmitter: EventEmitter
-        +constructor(options: MarkdownRiverOptions)
-        +write(chunk: string): void
-        +end(): void
-        +on(event: string, handler: Function): void
-        +off(event: string, handler: Function): void
-        +destroy(): void
-    }
-
-    class CacheManager {
-        -content: string
-        -lastParsedIndex: number
-        -streamState: StreamState
-        +append(chunk: string): void
-        +getFullContent(): string
-        +getUnparsedContent(): string
-        +getParsedContent(): string
-        +updateParsedIndex(index: number): void
-        +reset(): void
-    }
-
-    class ParseStrategy {
-        <<interface>>
-        +process(content: string, lastIndex: number): number | string
-    }
-
-    class StandardStrategy {
-        +process(content: string, lastIndex: number): number | string
-        -detectUnmatchedSymbols(unparsed: string): object
-        -generateOptimisticContent(type: string, content: string): string
-    }
-
-    class MarkdownParser {
-        -marked: Marked
-        -options: MarkedOptions
-        +parse(content: string): string
-        +configure(options: MarkedOptions): void
-    }
-
-    class EventEmitter {
-        -mitt: Emitter
-        +on(event: string, handler: Function): void
-        +off(event: string, handler: Function): void
-        +emit(event: string, data: any): void
-        +all(): Map
-    }
-
-    MarkdownRiver --> CacheManager
-    MarkdownRiver --> ParseStrategy
-    MarkdownRiver --> MarkdownParser
-    MarkdownRiver --> EventEmitter
-    StandardStrategy ..|> ParseStrategy
-```
-
-### 9.2 文件结构设计
+### 7.1 项目结构
 
 ```
 markdown-river/
 ├── src/
-│   ├── index.ts                    # 主入口，导出所有公共 API
-│   ├── core/
-│   │   ├── MarkdownRiver.ts       # 核心类
-│   │   ├── CacheManager.ts        # 缓存管理器
-│   │   └── MarkdownParser.ts      # Markdown 解析器封装
-│   ├── strategies/
-│   │   ├── index.ts               # 策略导出
-│   │   ├── ParseStrategy.ts       # 策略接口定义
-│   │   └── StandardStrategy.ts    # 标准策略实现
-│   ├── events/
-│   │   ├── EventEmitter.ts        # 事件发射器封装
-│   │   └── types.ts               # 事件类型定义
-│   ├── react/
-│   │   └── useMarkdownRiver.ts    # React Hook
-│   └── types/
-│       └── index.ts               # 公共类型定义
+│   └── core/
+│       └── MarkdownRiver.ts    # 核心实现（单文件）
 ├── tests/
-│   ├── unit/
-│   │   ├── core/
-│   │   │   ├── MarkdownRiver.test.ts
-│   │   │   ├── CacheManager.test.ts
-│   │   │   └── MarkdownParser.test.ts
-│   │   └── strategies/
-│   │       ├── StandardStrategy.test.ts
-│   │       └── ConservativeStrategy.test.ts
-│   └── integration/
-│       ├── streaming.test.ts       # 流式渲染集成测试
-│       └── react-hook.test.ts     # React Hook 集成测试
-└── dist/                          # 构建输出
+│   └── e2e/                    # 端到端测试
+├── examples/
+│   └── react-vite/             # React 示例
+└── demo/                       # 在线演示
 ```
 
-### 9.3 模块职责
+### 7.2 依赖管理
 
-| 模块             | 职责                      | 依赖              |
-| ---------------- | ------------------------- | ----------------- |
-| MarkdownRiver    | 协调各模块，提供对外 API  | 所有内部模块      |
-| CacheManager     | 管理内容缓存和解析位置    | 无                |
-| ParseStrategy    | 定义歧义检测接口          | 无                |
-| StandardStrategy | 实现标准歧义检测          | ParseStrategy     |
-| MarkdownParser   | 封装 marked，提供解析功能 | marked            |
-| EventEmitter     | 封装 mitt，提供事件功能   | mitt              |
-| useMarkdownRiver | React 集成                | html-react-parser |
+**零运行时依赖**：
 
-## 10. 最佳实践
+- 无需第三方库
+- 纯 TypeScript 实现
+- 打包后体积极小
 
-### 10.1 参数调优建议
+### 7.3 构建配置
 
-1. **分析使用场景**
-   - 输入速度：快速输入需要更大的字符阈值
-   - 网络延迟：高延迟需要更长的时间阈值
-   - 内容类型：代码需要更大的缓冲区
+- **TypeScript**：严格类型检查
+- **ESLint**：代码规范
+- **Vitest**：单元测试
+- **Rollup**：打包工具
 
-2. **监控和调整**
-   - 使用 buffer:status 事件监控缓冲行为
-   - 根据实际触发频率调整参数
-   - 平衡实时性和稳定性
+## 8. 最佳实践
 
-3. **性能优化**
-   - 避免过小的阈值（频繁渲染）
-   - 避免过大的阈值（响应迟钝）
-   - 根据设备性能适配
+### 8.1 AI 配置建议
 
-### 9.2 集成建议
-
-1. **错误处理**
-   - 始终监听错误事件
-   - 提供降级展示方案
-   - 记录异常信息
-
-2. **资源管理**
-   - 组件卸载时调用 destroy()
-   - 及时移除事件监听
-   - 避免内存泄漏
-
-3. **用户体验**
-   - 提供加载状态提示
-   - 平滑的过渡效果
-   - 合理的错误提示
-
-## 10. 架构优势总结
-
-```mermaid
-mindmap
-  root((Markdown River))
-    简单性
-      最小 API
-      清晰架构
-      易于理解
-    可靠性
-      成熟组件
-      充分测试
-      错误处理
-    性能
-      智能缓冲
-      批量解析
-      React 优化
-    扩展性
-      插件机制
-      事件系统
-      配置灵活
+```javascript
+// OpenAI 示例
+const response = await openai.chat.completions.create({
+  messages: [
+    {
+      role: 'system',
+      content: '请使用 HTML 标签格式化输出，例如 <strong> 而不是 **',
+    },
+  ],
+  stream: true,
+});
 ```
 
-通过这种简洁而有效的设计，Markdown River 专注于解决流式渲染的核心问题，为开发者提供一个可靠、易用的解决方案。
+### 8.2 错误处理
+
+```javascript
+river.onHtmlUpdate(html => {
+  try {
+    updateUI(html);
+  } catch (error) {
+    console.error('UI update failed:', error);
+    // 其他监听器不受影响
+  }
+});
+```
+
+### 8.3 性能优化
+
+- 使用 `requestAnimationFrame` 批量更新 DOM
+- 避免在监听器中进行重计算
+- 考虑使用虚拟滚动处理长内容
+
+## 9. 架构决策记录
+
+### 9.1 为什么不再支持 Markdown
+
+**背景**：项目最初名为 "Markdown River"，计划支持 Markdown 流式渲染。
+
+**决策**：专注于 HTML 流式渲染，不再支持 Markdown。
+
+**原因**：
+
+1. Markdown 符号歧义性导致的闪烁问题无法根本解决
+2. HTML 标签语义明确，只需处理完整性问题
+3. AI 可以直接输出 HTML，无需 Markdown 中间层
+4. 简化实现，提高可靠性
+
+### 9.2 事件驱动 vs 返回值
+
+**决策**：使用事件驱动 API 而非返回值模式。
+
+**原因**：
+
+1. 支持多个监听器，适合复杂应用场景
+2. 解耦数据流和渲染逻辑
+3. 便于实现智能更新（只在变化时触发）
+4. 更好的错误隔离
+
+### 9.3 单文件实现
+
+**决策**：核心功能集中在单个文件 `MarkdownRiver.ts` 中。
+
+**原因**：
+
+1. 功能足够简单，不需要复杂的模块划分
+2. 便于理解和维护
+3. 减少构建复杂度
+4. 零运行时依赖
+
+## 10. 未来展望
+
+### 10.1 可能的扩展
+
+- **插件系统**：支持自定义标签处理逻辑
+- **流控制**：背压处理、暂停/恢复
+- **统计信息**：性能指标、渲染统计
+- **Web Components**：提供原生 Web 组件
+
+### 10.2 保持简单
+
+核心原则：**保持简单，专注于解决一个问题**。
+
+不会添加的功能：
+
+- Markdown 解析
+- 语法高亮
+- 自定义渲染器
+- 复杂的配置选项
+
+## 11. 总结
+
+Markdown River 通过以下设计实现了其目标：
+
+1. **正确的技术选择**：HTML 而非 Markdown
+2. **极简的 API**：6 个方法解决所有问题
+3. **智能的实现**：只在必要时缓冲，只在变化时更新
+4. **可靠的架构**：事件驱动、错误隔离、零依赖
+
+这个项目证明了：**简单的解决方案往往是最好的解决方案**。
